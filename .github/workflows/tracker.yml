@@ -1,0 +1,27 @@
+name: VATSIM Background Tracker
+
+on:
+  schedule:
+    # Запуск каждые 5 минут. 
+    # Примечание: на бесплатных аккаунтах GitHub реальный интервал может плавать от 5 до 15 минут, это нормально.
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Позволяет запускать скрипт руками из интерфейса GitHub
+
+jobs:
+  check-flights:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Tracker
+        run: npm start
