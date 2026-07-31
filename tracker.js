@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc } from "firebase/firestore";
 
 // Твой конфиг Firebase
 const firebaseConfig = {
@@ -13,6 +13,20 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+// Функция для записи системных логов бота
+async function logSystemAudit(action, details) {
+    try {
+        await addDoc(collection(db, 'audit_logs'), {
+            timestamp: new Date().toISOString(),
+            adminCid: 'Система (Бот)',
+            action: action,
+            details: details
+        });
+    } catch (error) {
+        console.error("Ошибка записи системного аудита:", error);
+    }
+}
 
 const BASE_PILOTS = [
     { cid: "1816284", name: "Karim I." }
@@ -103,15 +117,24 @@ async function run() {
             }
         }
 
+        // 5. Запись результатов и логов аудита
         if (needUpdateFirebase) {
             await setDoc(doc(db, 'vatsim_history', 'roster'), firebaseFlightsCache, { merge: true });
             console.log("Кэш ростера обновлен.");
+            await logSystemAudit('Системная проверка', 'Данные обновлены: найдены изменения в сети');
         } else {
             console.log("Изменений нет.");
+            await logSystemAudit('Системная проверка', 'Проверка завершена. Изменений у пилотов нет');
         }
 
     } catch (error) {
         console.error("Ошибка во время выполнения:", error);
+        
+        // Дополнительно можно логировать ошибки, если бот сломался
+        try {
+            await logSystemAudit('Системная ошибка', error.message || 'Неизвестная ошибка скрипта');
+        } catch(e) {}
+        
         process.exit(1);
     }
     
