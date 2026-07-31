@@ -845,11 +845,49 @@
 
         /* ТАБЛИЦА СПИСКА ПИЛОТОВ (PILOT ROSTER) */
         .roster-wrapper {
+            position: relative;
             background: rgba(20, 20, 20, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 12px;
             overflow: hidden;
             width: 100%;
+        }
+
+        .roster-fade-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 90px;
+            background: linear-gradient(to bottom, rgba(20, 20, 20, 0), rgba(18, 18, 18, 0.98));
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            display: none;
+        }
+
+        .roster-fade-overlay.visible {
+            display: block;
+        }
+
+        .btn-show-more {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: white;
+            padding: 10px 28px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 20px;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn-show-more:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
         }
 
         .roster-table {
@@ -1423,15 +1461,15 @@
             <div id="eventAdminBtns" style="text-align: center; margin-bottom: 30px; display: flex; justify-content: center; gap: 12px; z-index: 20; position: relative;"></div>
             
             <div id="eventCarouselContainer" class="carousel-container">
-                </div>
+            </div>
         </div>
     </section>
 
     <section id="roster" class="content-section">
         <div class="container">
-            <h2 class="section-title lang" data-ru="Список и активность участников" data-en="Members Roster & Live Activity">Список и активность участников</h2>
+            <h2 class="section-title lang" data-ru="Состав компании" data-en="Our Roster">Состав компании</h2>
             <div id="rosterAdminControls" style="margin-bottom: 15px; text-align: right;"></div>
-            <div class="roster-wrapper">
+            <div class="roster-wrapper" id="rosterWrapper">
                 <table class="roster-table">
                     <thead>
                         <tr>
@@ -1439,11 +1477,19 @@
                             <th class="lang" data-ru="Позывной" data-en="Callsign">Позывной</th>
                             <th class="lang" data-ru="Тип ВС" data-en="Aircraft">Тип ВС</th>
                             <th class="lang" data-ru="Маршрут" data-en="Route">Маршрут</th>
-                            <th class="lang" data-ru="Статус" data-en="Network Status">Статус</th>
+                            <th class="lang" data-ru="Статус" data-en="Status">Статус</th>
                         </tr>
                     </thead>
-                    <tbody id="roster-tbody"></tbody>
+                    <tbody id="roster-tbody">
+                        </tbody>
                 </table>
+                <div id="rosterFadeOverlay" class="roster-fade-overlay"></div>
+            </div>
+            
+            <div id="rosterMoreContainer" style="text-align: center; margin-top: 22px; display: none;">
+                <button id="showMorePilotsBtn" class="btn-show-more" onclick="window.showMorePilots()">
+                    Показать больше
+                </button>
             </div>
         </div>
     </section>
@@ -1538,17 +1584,34 @@
     </div>
 
     <div class="modal" id="adminPanelModal">
-        <div class="modal-content" style="max-width: 550px;">
-            <button class="close-modal-btn" onclick="document.getElementById('adminPanelModal').classList.remove('open')">&times;</button>
+        <div class="modal-content" style="max-width: 800px;"> <button class="close-modal-btn" onclick="document.getElementById('adminPanelModal').classList.remove('open')">&times;</button>
             <div class="modal-header">Панель Управления vClearance</div>
             <div class="modal-body">
                 <div id="adminPanelRoleInfo" style="font-size: 12px; color: #aaa; margin-bottom: 18px; text-align: center;"></div>
+                
                 <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;">Добавить нового пилота</h3>
                 <div class="profile-login-form" style="margin-bottom: 30px;">
                     <input type="text" id="newPilotCid" placeholder="VATSIM CID (например, 1999888)">
                     <input type="text" id="newPilotName" placeholder="Имя и фамилия (например, Alexey P.)">
                     <button onclick="window.addAdminPilot()" style="background: #2ecc71; color: white;">Добавить в Roster</button>
                 </div>
+
+                <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;">Журнал аудита</h3>
+                <div class="audit-wrapper" style="max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                    <table class="roster-table" style="font-size: 12px; min-width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Админ (CID)</th>
+                                <th>Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-tbody">
+                            <tr><td colspan="3" style="text-align:center; color:#666;">Загрузка данных...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
             </div>
         </div>
     </div>
@@ -1597,9 +1660,9 @@
     </div>
 
     <script type="module">
-        // 1. Импортируем нужные функции из официального CDN Firebase
+        // 1. Импортируем нужные функции из официального CDN Firebase + функции для запросов (query, orderBy, limit)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, onSnapshot, deleteDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // 2. Конфигурация проекта из вкладки CDN
         const firebaseConfig = {
@@ -1619,6 +1682,91 @@
         window.currentAdminRole = null;
         window.currentAdminCid = null;
         const ADMIN_CACHE_KEY = 'va_admin_cache';
+
+        window.rosterLimit = 3;
+        window.currentAuditDocs = null;
+
+        // --- Вспомогательная функция для логирования в Журнал Аудита ---
+        window.logAudit = async function(action, details) {
+            if (!window.currentAdminCid) return;
+            try {
+                await addDoc(collection(db, 'audit_logs'), {
+                    timestamp: new Date().toISOString(),
+                    adminCid: window.currentAdminCid,
+                    action: action,
+                    details: details
+                });
+            } catch (error) {
+                console.error("Ошибка записи в аудит:", error);
+            }
+        };
+
+        // --- Слушатель для Журнала Аудита ---
+        function listenToAuditLogs() {
+            const q = query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'), limit(50));
+            onSnapshot(q, (snapshot) => {
+                window.currentAuditDocs = snapshot;
+                window.renderAuditLogs();
+            });
+        }
+
+        window.renderAuditLogs = function() {
+            const tbody = document.getElementById('audit-tbody');
+            if (!tbody || !window.currentAuditDocs) return;
+            tbody.innerHTML = '';
+            
+            if (window.currentAuditDocs.empty) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#666;">Журнал пуст</td></tr>`;
+                return;
+            }
+
+            window.currentAuditDocs.forEach(docSnap => {
+                const data = docSnap.data();
+                const logId = docSnap.id;
+                const dateObj = new Date(data.timestamp);
+                const dateStr = dateObj.toLocaleString('ru-RU', {
+                    day: '2-digit', month: '2-digit', year: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                });
+                
+                let deleteBtnHtml = '';
+                if (window.currentAdminRole === 'founder') {
+                    deleteBtnHtml = `<button onclick="window.deleteAuditLog('${logId}')" style="background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-left: 8px;" title="Удалить лог">Удалить</button>`;
+                }
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color:#aaa;">${dateStr}</td>
+                    <td><strong style="color:#2ecc71;">${data.adminCid}</strong></td>
+                    <td>${data.action}: <span style="color:#ccc;">${data.details}</span> ${deleteBtnHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.deleteAuditLog = async function(logId) {
+            if (window.currentAdminRole !== 'founder') {
+                alert('Удаление логов доступно только Основателю!');
+                return;
+            }
+            if (confirm('Вы уверены, что хотите удалить эту запись из логов?')) {
+                try {
+                    await deleteDoc(doc(db, 'audit_logs', logId));
+                } catch (error) {
+                    console.error('Ошибка при удалении лога:', error);
+                    alert('Не удалось удалить запись из логов.');
+                }
+            }
+        };
+
+        window.showMorePilots = function() {
+            window.rosterLimit += 10;
+            if (window.lastVatsimData) {
+                renderRoster(window.lastVatsimData);
+            } else {
+                renderRoster({ pilots: [], controllers: [] });
+            }
+        };
 
         async function seedInitialAdmins() {
             const seed = { cid: '1816284', password: 'KarimIbragimovClearance2026K', role: 'founder' };
@@ -1708,7 +1856,7 @@
             else renderRoster({ pilots: [], controllers: [] });
             
             renderRecentFlights();
-            window.renderEventsCarousel(); // Перерисовка бейджей и дат
+            window.renderEventsCarousel(); 
             window.updateProfileWidget();
             if (window.innerWidth <= 768) closeMenu();
         };
@@ -1782,21 +1930,17 @@
                     events.push(data);
                 });
                 
-                // Сортировка по дате по возрастанию
-                // Благодаря этому, старые ивенты слева, будущие - справа
                 events.sort((a, b) => new Date(a.date) - new Date(b.date));
                 window.allEvents = events;
 
-                // Найти ближайший будущий ивент, чтобы показать его в центре по умолчанию
                 const now = new Date();
                 let closestIndex = events.findIndex(e => new Date(e.date) >= now);
                 if (closestIndex === -1 && events.length > 0) {
-                    closestIndex = events.length - 1; // если все в прошлом, показываем самый последний
+                    closestIndex = events.length - 1; 
                 } else if (events.length === 0) {
                     closestIndex = 0;
                 }
                 
-                // Устанавливаем индекс, если еще не задан или выходит за рамки
                 if (window.currentEventIndex >= events.length || window.allEvents.length === 0) {
                     window.currentEventIndex = closestIndex !== -1 ? closestIndex : 0;
                 }
@@ -1809,7 +1953,6 @@
             const container = document.getElementById('eventCarouselContainer');
             const adminBtns = document.getElementById('eventAdminBtns');
             
-            // Кнопки управления (только для админов)
             if (window.isAdmin()) {
                 let delBtn = window.allEvents.length > 0 ? `<button onclick="window.deleteCurrentEvent()" class="btn-event-admin btn-event-del">Удалить текущий</button>` : '';
                 adminBtns.innerHTML = `
@@ -1851,7 +1994,6 @@
 
                 const imgSrc = ev.img && ev.img.trim() !== '' ? ev.img : 'https://i.imgur.com/kFSOdpY.png';
                 
-                // Форматируем дату строго в UTC (Zulu) и добавляем букву 'z'
                 const dateObj = new Date(ev.date);
                 const eventDateFormatted = dateObj.toLocaleString(currentLang === 'en' ? 'en-GB' : 'ru-RU', {
                     timeZone: 'UTC',
@@ -1904,7 +2046,7 @@
         };
 
         window.submitNewEvent = async function() {
-            const dateVal = document.getElementById('eventDate').value; // Формат "2026-07-01T15:00"
+            const dateVal = document.getElementById('eventDate').value; 
             const img = document.getElementById('eventImg').value.trim();
             const title = document.getElementById('eventTitle').value.trim();
             const route = document.getElementById('eventRoute').value.trim();
@@ -1915,14 +2057,14 @@
                 return;
             }
             
-            // Добавляем индекс 'Z', чтобы дата сохранилась в Firebase как строго UTC/Гринвич.
             const date = dateVal + 'Z';
             
             const eventData = { date, img, title, route, desc, addedAt: new Date().toISOString() };
             
             try {
-                // Добавляем документ в коллекцию events
                 await addDoc(collection(db, 'events'), eventData);
+                await window.logAudit('Добавление ивента', `Название: "${title}", Маршрут: ${route}`);
+                
                 document.getElementById('eventDate').value = '';
                 document.getElementById('eventImg').value = '';
                 document.getElementById('eventTitle').value = '';
@@ -1942,7 +2084,8 @@
             if (confirm(`Вы уверены, что хотите удалить ивент: "${ev.title}"?`)) {
                 try {
                     await deleteDoc(doc(db, 'events', ev.id));
-                    // Сдвигаем индекс влево, чтобы не вылезти за пределы после удаления
+                    await window.logAudit('Удаление ивента', `Название: "${ev.title}"`);
+                    
                     if (window.currentEventIndex > 0) {
                         window.currentEventIndex--;
                     }
@@ -2058,6 +2201,7 @@
         }
 
         function renderRoster(vatsimData) {
+            if (!rosterTbody) return;
             rosterTbody.innerHTML = '';
             const pilotsOnline = vatsimData.pilots || [];
             const controllersOnline = vatsimData.controllers || [];
@@ -2087,8 +2231,11 @@
             });
 
             const isAdmin = window.isAdmin();
+            
+            const totalPilots = sortedPilots.length;
+            const visiblePilots = sortedPilots.slice(0, window.rosterLimit);
 
-            sortedPilots.forEach(localPilot => {
+            visiblePilots.forEach(localPilot => {
                 const onlinePilot = pilotsOnline.find(p => p.cid.toString() === localPilot.cid.toString());
                 const onlineController = controllersOnline.find(c => c.cid.toString() === localPilot.cid.toString());
 
@@ -2240,6 +2387,24 @@
                 rosterTbody.appendChild(tr);
                 rosterTbody.appendChild(detailsTr);
             });
+            
+            const fadeOverlay = document.getElementById('rosterFadeOverlay');
+            const moreContainer = document.getElementById('rosterMoreContainer');
+            const moreBtn = document.getElementById('showMorePilotsBtn');
+
+            if (totalPilots > window.rosterLimit) {
+                if (fadeOverlay) fadeOverlay.classList.add('visible');
+                if (moreContainer) moreContainer.style.display = 'block';
+                if (moreBtn) {
+                    const remaining = totalPilots - window.rosterLimit;
+                    moreBtn.textContent = currentLang === 'en' 
+                        ? `Show More (${remaining})` 
+                        : `Показать больше (${remaining})`;
+                }
+            } else {
+                if (fadeOverlay) fadeOverlay.classList.remove('visible');
+                if (moreContainer) moreContainer.style.display = 'none';
+            }
         }
 
         window.openModal = function() { document.getElementById('privacyModal').classList.add('open'); };
@@ -2290,6 +2455,7 @@
                 if (window.lastVatsimData) renderRoster(window.lastVatsimData); 
                 renderRecentFlights(); 
                 window.renderEventsCarousel(); 
+                window.renderAuditLogs();
                 const roleLabel = window.currentAdminRole === 'founder' ? 'Основатель' : 'Администратор';
                 alert(`Доступ подтвержден! Ваша роль: ${roleLabel}.`);
             } else {
@@ -2308,6 +2474,7 @@
             if (window.lastVatsimData) renderRoster(window.lastVatsimData);
             renderRecentFlights();
             window.renderEventsCarousel(); 
+            window.renderAuditLogs();
             document.getElementById('adminPanelModal').classList.remove('open');
         };
 
@@ -2332,7 +2499,7 @@
                 infoDiv.innerHTML = `Вы вошли как <strong>${roleLabel}</strong> (CID ${window.currentAdminCid}) &nbsp;·&nbsp; <span style="color:#e74c3c; cursor:pointer; text-decoration:underline;" onclick="window.logoutAdmin()">Выйти из админки</span>`;
             }
             document.getElementById('adminPanelModal').classList.add('open');
-        };
+        }
 
         window.openAddAdminModalFor = function(cid, name) {
             if (!window.isFounder()) {
@@ -2358,6 +2525,7 @@
             if (confirm(`Убрать права администратора у CID ${cid}?`)) {
                 try {
                     await deleteDoc(doc(db, 'admins', cid));
+                    await window.logAudit('Снятие администратора', `CID: ${cid}`);
                 } catch (error) {
                     console.error('Ошибка удаления администратора:', error);
                     alert('Произошла ошибка при удалении администратора.');
@@ -2391,6 +2559,9 @@
                     role: 'admin',
                     addedBy: window.currentAdminCid
                 });
+                
+                await window.logAudit('Назначение администратора', `Новый админ CID: ${cid}`);
+                
                 cidInput.value = '';
                 passInput.value = '';
                 if (errDiv) errDiv.style.display = 'none';
@@ -2420,6 +2591,8 @@
             
             try {
                 await setDoc(doc(db, 'custom_pilots', cid), { cid, name });
+                await window.logAudit('Добавление пилота', `Имя: ${name}, CID: ${cid}`);
+                
                 cidInput.value = '';
                 nameInput.value = '';
                 alert(`Пилот ${name} (${cid}) добавлен в базу!`);
@@ -2433,6 +2606,7 @@
             if (confirm(`Вы уверены, что хотите удалить пилота с CID ${cid} из ростера?`)) {
                 try {
                     await deleteDoc(doc(db, 'custom_pilots', cid));
+                    await window.logAudit('Удаление пилота', `Удален CID: ${cid}`);
                 } catch (error) {
                     console.error("Ошибка удаления:", error);
                     alert("Произошла ошибка при удалении.");
@@ -2662,6 +2836,9 @@
                     await setDoc(doc(db, 'vatsim_history', 'recent_flights_log'), { 
                         flights: window.recentFlightsData 
                     }, { merge: true });
+                    
+                    await window.logAudit('Удаление истории', `Удален полет ID: ${flightId}`);
+                    
                     renderRecentFlights();
                 } catch (error) {
                     console.error("Ошибка при удалении полета: ", error);
@@ -2739,6 +2916,7 @@
             listenToEvents(); 
             listenToPilots(); 
             listenToAdmins(); 
+            listenToAuditLogs(); 
             
             renderRoster({ pilots: [], controllers: [] }); 
             window.updateProfileWidget(); 
