@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch: 
-  repository_dispatch: # Добавляем этот триггер для внешних запросов
+  repository_dispatch: # Обязательно добавьте эту строчку
     types: [run-tracker]
 
 jobs:
