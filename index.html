@@ -1939,6 +1939,7 @@
         // ================= ИВЕНТЫ: СЛУШАТЕЛЬ И ЛОГИКА КАРУСЕЛИ =================
         window.allEvents = [];
         window.currentEventIndex = 0;
+        window._eventsInitialized = false;
 
         function listenToEvents() {
             onSnapshot(collection(db, 'events'), (snapshot) => {
@@ -1960,8 +1961,9 @@
                     closestIndex = 0;
                 }
                 
-                if (window.currentEventIndex >= events.length || window.allEvents.length === 0) {
+                if (!window._eventsInitialized || window.currentEventIndex >= events.length || window.allEvents.length === 0) {
                     window.currentEventIndex = closestIndex !== -1 ? closestIndex : 0;
+                    if (window.allEvents.length > 0) window._eventsInitialized = true;
                 }
                 
                 window.renderEventsCarousel();
