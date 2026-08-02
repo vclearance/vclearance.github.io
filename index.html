@@ -1717,7 +1717,7 @@
 
         // --- Слушатель для Журнала Аудита ---
         function listenToAuditLogs() {
-            const q = query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'), limit(50));
+            const q = query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'));
             onSnapshot(q, (snapshot) => {
                 window.currentAuditDocs = snapshot;
                 window.renderAuditLogs();
@@ -2123,16 +2123,22 @@
                 if (docSnap.exists()) {
                     window.firebaseFlightsCache = docSnap.data() || {};
                 }
-                
-                const recentRef = doc(db, 'vatsim_history', 'recent_flights_log');
-                const recentSnap = await getDoc(recentRef);
-                if (recentSnap.exists() && recentSnap.data().flights) {
-                    window.recentFlightsData = recentSnap.data().flights;
-                }
-                renderRecentFlights(); 
+                // Последние полёты больше не читаются здесь — за это отвечает
+                // listenToRecentFlights() (живой слушатель подколлекции recent_flights).
             } catch (error) {
                 console.error("Ошибка чтения из Firebase:", error);
             }
+        }
+
+        // Живой слушатель подколлекции recent_flights — сайт только читает,
+        // запись выполняет исключительно бот (tracker.js). Это убирает гонку записи
+        // между ботом и всеми открытыми вкладками сайта, из-за которой полёты пропадали.
+        function listenToRecentFlights() {
+            const q = query(collection(db, 'recent_flights'), orderBy('timestamp', 'desc'), limit(200));
+            onSnapshot(q, (snapshot) => {
+                window.recentFlightsData = snapshot.docs.map(d => ({ ...d.data(), docId: d.id }));
+                renderRecentFlights();
+            });
         }
 
         async function fetchVatsimData() {
@@ -2165,35 +2171,8 @@
                             needUpdateFirebase = true;
                         }
 
-                        if (callsign.toUpperCase().includes('CLR') && route !== '??? ➔ ???') {
-                            const flightId = `${localPilot.cid}_${callsign}_${route}`;
-                            const isAlreadyLogged = window.recentFlightsData.some(f => 
-                                f.cid === localPilot.cid && f.flightId === flightId
-                            );
-
-                            if (!isAlreadyLogged) {
-                                const newFlightLog = {
-                                    flightId: flightId,
-                                    cid: localPilot.cid,
-                                    name: localPilot.name,
-                                    callsign: callsign,
-                                    route: route,
-                                    aircraft: aircraft,
-                                    timestamp: new Date().toISOString()
-                                };
-                                
-                                window.recentFlightsData.unshift(newFlightLog);
-                                if (window.recentFlightsData.length > 60) {
-                                    window.recentFlightsData = window.recentFlightsData.slice(0, 60);
-                                }
-                                
-                                setDoc(doc(db, 'vatsim_history', 'recent_flights_log'), { 
-                                    flights: window.recentFlightsData 
-                                }, { merge: true });
-                                
-                                renderRecentFlights();
-                            }
-                        }
+                        // Запись в recent_flights теперь делает только бот (tracker.js) —
+                        // сайт больше не пишет полёты сам, только читает через listenToRecentFlights().
 
                     } else if (onlineController) {
                         const callsign = onlineController.callsign || '---';
@@ -2848,17 +2827,14 @@
             }
         });
 
-        window.deleteRecentFlight = async function(flightId) {
+        window.deleteRecentFlight = async function(docId) {
             if (confirm('Вы уверены, что хотите удалить этот полет из истории?')) {
                 try {
-                    window.recentFlightsData = window.recentFlightsData.filter(f => f.flightId !== flightId);
-                    await setDoc(doc(db, 'vatsim_history', 'recent_flights_log'), { 
-                        flights: window.recentFlightsData 
-                    }, { merge: true });
-                    
-                    await window.logAudit('Удаление истории', `Удален полет ID: ${flightId}`);
-                    
-                    renderRecentFlights();
+                    // Удаляем конкретный документ из подколлекции recent_flights —
+                    // на остальные записи (и на бота) это никак не влияет.
+                    await deleteDoc(doc(db, 'recent_flights', docId));
+                    await window.logAudit('Удаление истории', `Удален полет ID: ${docId}`);
+                    // window.recentFlightsData обновится сам через onSnapshot в listenToRecentFlights()
                 } catch (error) {
                     console.error("Ошибка при удалении полета: ", error);
                     alert("Произошла ошибка при удалении записи о полете.");
@@ -2901,7 +2877,7 @@
 
                 let deleteBtnHtml = '';
                 if (isAdmin) {
-                    deleteBtnHtml = `<button onclick="event.stopPropagation(); window.deleteRecentFlight('${flight.flightId}')" style="background: #e74c3c; color: white; border: none; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-left: 8px; cursor: pointer;">Удалить</button>`;
+                    deleteBtnHtml = `<button onclick="event.stopPropagation(); window.deleteRecentFlight('${flight.docId}')" style="background: #e74c3c; color: white; border: none; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-left: 8px; cursor: pointer;">Удалить</button>`;
                 }
 
                 const tr = document.createElement('tr');
@@ -2934,7 +2910,8 @@
             listenToEvents(); 
             listenToPilots(); 
             listenToAdmins(); 
-            listenToAuditLogs(); 
+            listenToAuditLogs();
+            listenToRecentFlights();
             
             renderRoster({ pilots: [], controllers: [] }); 
             window.updateProfileWidget(); 

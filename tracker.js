@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, query, orderBy, limit } from "firebase/firestore";
 
 // Твой конфиг Firebase
 const firebaseConfig = {
@@ -13,6 +13,12 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+// Через сколько часов один и тот же полёт (тот же cid+callsign+route) можно
+// засчитывать как НОВЫЙ вылет, а не продолжение текущего. Бот опрашивает VATSIM
+// каждые 5 минут, поэтому без такого окна один и тот же полёт писался бы
+// в историю десятки раз, пока пилот не сменит callsign/маршрут.
+const DEDUPE_WINDOW_HOURS = 6;
 
 // Функция для записи системных логов бота
 async function logSystemAudit(action, details) {
@@ -51,8 +57,23 @@ async function run() {
         const cacheSnap = await getDoc(doc(db, 'vatsim_history', 'roster'));
         let firebaseFlightsCache = cacheSnap.exists() ? cacheSnap.data() : {};
 
-        const recentSnap = await getDoc(doc(db, 'vatsim_history', 'recent_flights_log'));
-        let recentFlightsData = (recentSnap.exists() && recentSnap.data().flights) ? recentSnap.data().flights : [];
+        // Читаем последние полёты из подколлекции recent_flights (много отдельных
+        // документов со случайными id, а не один документ с массивом). Это убирает
+        // гонку записи между ботом и открытыми вкладками сайта, из-за которой
+        // полёты пропадали при одновременной перезаписи одного и того же документа.
+        const recentQ = query(collection(db, 'recent_flights'), orderBy('timestamp', 'desc'), limit(300));
+        const recentSnap = await getDocs(recentQ);
+        // Для дедупликации храним время ПОСЛЕДНЕЙ известной записи по каждому flightId,
+        // а не сам факт "когда-либо был залогирован" — это позволяет засчитывать
+        // повторные вылеты тем же маршрутом после DEDUPE_WINDOW_HOURS.
+        let lastSeenAt = new Map();
+        recentSnap.forEach(d => {
+            const data = d.data();
+            const prev = lastSeenAt.get(data.flightId);
+            if (!prev || new Date(data.timestamp) > new Date(prev)) {
+                lastSeenAt.set(data.flightId, data.timestamp);
+            }
+        });
 
         // 3. Скачиваем данные VATSIM
         const response = await fetch('https://data.vatsim.net/v3/vatsim-data.json');
@@ -84,27 +105,30 @@ async function run() {
                 // Проверка на позывной CLR и запись в последние полеты
                 if (callsign.toUpperCase().includes('CLR') && route !== '??? ➔ ???') {
                     const flightId = `${localPilot.cid}_${callsign}_${route}`;
-                    const isAlreadyLogged = recentFlightsData.some(f => f.cid === localPilot.cid && f.flightId === flightId);
+                    const lastSeen = lastSeenAt.get(flightId);
+                    const hoursSinceLastSeen = lastSeen
+                        ? (Date.now() - new Date(lastSeen).getTime()) / (1000 * 60 * 60)
+                        : Infinity;
 
-                    if (!isAlreadyLogged) {
+                    if (hoursSinceLastSeen >= DEDUPE_WINDOW_HOURS) {
                         console.log(`Найден новый полет: ${callsign} от ${localPilot.name}`);
-                        recentFlightsData.unshift({
+                        const nowIso = new Date().toISOString();
+                        lastSeenAt.set(flightId, nowIso);
+
+                        // addDoc со случайным id — каждый полёт отдельным документом.
+                        // Это исключает и гонку записи (нет общего документа, который можно
+                        // перезаписать поверх чужих изменений), и проблему повторных вылетов
+                        // (id больше не завязан на flightId, так что один и тот же маршрут
+                        // может быть залогирован сколько угодно раз с разными id документов).
+                        await addDoc(collection(db, 'recent_flights'), {
                             flightId: flightId,
                             cid: localPilot.cid,
                             name: localPilot.name,
                             callsign: callsign,
                             route: route,
                             aircraft: aircraft,
-                            timestamp: new Date().toISOString()
+                            timestamp: nowIso
                         });
-                        
-                        if (recentFlightsData.length > 60) {
-                            recentFlightsData = recentFlightsData.slice(0, 60);
-                        }
-
-                        await setDoc(doc(db, 'vatsim_history', 'recent_flights_log'), { 
-                            flights: recentFlightsData 
-                        }, { merge: true });
                     }
                 }
 
