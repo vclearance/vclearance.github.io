@@ -577,7 +577,7 @@
         }
 
         #about { background-color: #121212; }
-        #fleet { background-color: #0a0a0a; border-top: 1px solid rgba(255, 255, 255, 0.02); }
+        #liveries { background-color: #0a0a0a; border-top: 1px solid rgba(255, 255, 255, 0.02); }
         #events { background-color: #0d0d0d; border-top: 1px solid rgba(255, 255, 255, 0.02); overflow: hidden; }
         #roster { background-color: #121212; border-top: 1px solid rgba(255, 255, 255, 0.02); scroll-margin-top: 70px; }
 
@@ -619,6 +619,132 @@
             transform: translateY(-5px);
             border-color: rgba(255, 255, 255, 0.15);
             background: rgba(25, 25, 25, 0.9);
+        }
+
+        /* ================= КАРТОЧКИ ЛИВРЕЙ ================= */
+        .livery-card {
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .livery-photo-wrap {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            background: #050505;
+        }
+        .livery-photo-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.4s ease;
+        }
+        .livery-card:hover .livery-photo-wrap img { transform: scale(1.05); }
+        .livery-body { padding: 20px 22px 24px; }
+        .livery-aircraft {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #888;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+        .livery-title {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+        .livery-sources {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .livery-source-link {
+            font-size: 12px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 6px 10px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .livery-source-link:hover {
+            background: rgba(46, 204, 113, 0.15);
+            border-color: rgba(46, 204, 113, 0.4);
+            color: #2ecc71;
+        }
+        .livery-empty {
+            text-align: center;
+            color: #555;
+            padding: 40px 0;
+            background: rgba(20,20,20,0.3);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.02);
+            width: 100%;
+            grid-column: 1 / -1;
+        }
+
+        /* ================= АДМИНКА: ЛИВРЕИ ================= */
+        .livery-admin-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 12px;
+        }
+        .livery-admin-row:last-child { border-bottom: none; }
+        .livery-admin-name { color: #eee; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .livery-admin-name span { color: #888; font-weight: 400; }
+        .livery-admin-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .livery-admin-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #ccc;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .livery-admin-btn:hover { background: rgba(255,255,255,0.15); }
+        .livery-admin-btn.del:hover { background: rgba(231, 76, 60, 0.25); border-color: rgba(231, 76, 60, 0.4); color: #e74c3c; }
+        .livery-admin-btn.edit:hover { background: rgba(52, 152, 219, 0.25); border-color: rgba(52, 152, 219, 0.4); color: #3498db; }
+
+        .livery-source-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        .livery-source-row input { margin: 0 !important; }
+        .livery-source-row .remove-source-btn {
+            background: rgba(231, 76, 60, 0.15);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+        .add-source-btn {
+            background: rgba(255,255,255,0.06) !important;
+            border: 1px dashed rgba(255,255,255,0.2) !important;
+            color: #ccc !important;
+            font-size: 12px !important;
+            padding: 8px !important;
+            margin-top: 4px !important;
         }
 
         /* ================= КАРУСЕЛЬ ИВЕНТОВ ================= */
@@ -1347,14 +1473,7 @@
                 <ul class="nav-links">
                     <li><a href="#about" class="lang" data-ru="О компании" data-en="About" onclick="closeMenu()">О компании</a></li>
                     
-                    <li class="dropdown" id="fleetDropdown">
-                        <a href="#fleet" class="lang" data-ru="Наш Флот" data-en="Our Fleet" onclick="toggleMobileDropdown(event)">Наш Флот</a>
-                        <ul class="dropdown-menu">
-                            <li><a href="#airbus-a320" onclick="highlightCard('airbus-a320')">Airbus A320</a></li>
-                            <li><a href="#boeing-737" onclick="highlightCard('boeing-737')">Boeing 737-900</a></li>
-                            <li><a href="#boeing-777" onclick="highlightCard('boeing-777')">Boeing 777</a></li>
-                        </ul>
-                    </li>
+                    <li><a href="#liveries" class="lang" data-ru="Ливреи" data-en="Liveries" onclick="closeMenu()">Ливреи</a></li>
                     <li><a href="#events" class="lang" data-ru="Ивенты" data-en="Events" onclick="closeMenu()">Ивенты</a></li>
                     <li><a href="#roster" class="lang" data-ru="Участники" data-en="Roster" onclick="closeMenu()">Участники</a></li>
                     <li><a href="#join" class="lang" data-ru="Вступить" data-en="Join Us" onclick="closeMenu()">Вступить</a></li>
@@ -1432,25 +1551,10 @@
         </div>
     </section>
 
-    <section id="fleet" class="content-section">
+    <section id="liveries" class="content-section">
         <div class="container">
-            <h2 class="section-title lang" data-ru="Наш Флот" data-en="Our Fleet">Наш Флот</h2>
-            <div class="grid">
-                <div class="card" id="airbus-a320">
-                    <span class="card-icon">🇪🇺</span>
-                    <h3>Airbus A320</h3>
-                    <p class="lang" data-ru="Европейская классика со статусным компьютерным управлением Fly-by-Wire. Наш основной узкофюзеляжный лайнер, идеально подходящий для выполнения ближне- и среднемагистральных рейсов." data-en="The European staple featuring highly sophisticated Fly-by-Wire computer law interfaces. Our primary narrow-body liner, perfect for short and medium haul hops.">Европейская классика со статусным компьютерным управлением Fly-by-Wire. Наш основной узкофюзеляжный лайнер, идеально подходящий для выполнения ближне- и среднемагистральных рейсов.</p>
-                </div>
-                <div class="card" id="boeing-737">
-                    <span class="card-icon">🇺🇸</span>
-                    <h3>Boeing 737-900</h3>
-                    <p class="lang" data-ru="Самый вместительный представитель семейства Next Generation в парке. Штурвальное управление, оверхед с тумблерами и честная динамика потребуют собранности." data-en="The longest member of the Next Generation family within our fleet. Yoke-and-cable control mechanics and a tight overhead panel require full pilot concentration.">Самый вместительный представитель семейства Next Generation в парке. Штурвальное управление, оверхед с тумблерами и честная динамика потребуют собранности.</p>
-                </div>
-                <div class="card" id="boeing-777">
-                    <span class="card-icon">👑</span>
-                    <h3>Boeing 777</h3>
-                    <p class="lang" data-ru="Мощный широкофюзеляжный флагман vClearance с двигателями GE90. Создан для трансконтинентальных перелетов и многочасовых миссий через океаны." data-en="The mighty wide-body flagship of vClearance powered by GE90 engines. Purpose-built for transcontinental operations and multi-hour oceanic crossings.">Мощный широкофюзеляжный флагман vClearance с двигателями GE90. Создан для трансконтинентальных перелетов и многочасовых миссий через океаны.</p>
-                </div>
+            <h2 class="section-title lang" data-ru="Ливреи" data-en="Liveries">Ливреи</h2>
+            <div class="grid" id="liveriesGrid">
             </div>
         </div>
     </section>
@@ -1597,6 +1701,14 @@
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;">
+                    <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; margin: 0;">Ливреи</h3>
+                    <button onclick="window.openAddLiveryModal()" style="background: #2ecc71; color: white; font-size: 11px; padding: 7px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600;">+ Добавить ливрею</button>
+                </div>
+                <div id="liveriesAdminList" style="max-height: 260px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 30px;">
+                    <div style="text-align:center; color:#666; padding: 15px; font-size: 12px;">Загрузка...</div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;">
                     <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; margin: 0;">Журнал аудита</h3>
                     <label style="font-size: 11px; text-transform: none; color: #aaa; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                         <input type="checkbox" id="toggleSystemLogs" onchange="window.toggleSystemLogs(this.checked)" style="width: auto; margin: 0; cursor: pointer;">
@@ -1661,6 +1773,32 @@
                     <textarea id="eventDesc" placeholder="Полное описание и регламент проведения мероприятия..." style="min-height: 120px; font-family: inherit; resize: vertical; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; width: 100%;"></textarea>
                     
                     <button onclick="window.submitNewEvent()" style="background: #2ecc71; color: white; margin-top: 10px;">Опубликовать ивент</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="addLiveryModal">
+        <div class="modal-content" style="max-width: 550px;">
+            <button class="close-modal-btn" onclick="window.closeLiveryModal()">&times;</button>
+            <div class="modal-header" id="liveryModalHeader">Добавить ливрею</div>
+            <div class="modal-body">
+                <div class="profile-login-form">
+                    <label style="font-size: 11px; text-transform: uppercase; color: #888;">Фото ливреи (ссылка, например Imgur):</label>
+                    <input type="text" id="liveryImg" placeholder="https://i.imgur.com/...">
+
+                    <label style="font-size: 11px; text-transform: uppercase; color: #888; margin-top: 5px;">Самолет (тип ВС):</label>
+                    <input type="text" id="liveryAircraft" placeholder="Например, Boeing 737-900">
+
+                    <label style="font-size: 11px; text-transform: uppercase; color: #888; margin-top: 5px;">Название ливреи:</label>
+                    <input type="text" id="liveryTitle" placeholder="Например, Aeroflot Retro">
+
+                    <label style="font-size: 11px; text-transform: uppercase; color: #888; margin-top: 5px;">Источники скачивания:</label>
+                    <div id="liverySourcesContainer"></div>
+                    <button type="button" class="add-source-btn" onclick="window.addLiverySourceRow()">+ Добавить источник</button>
+
+                    <button onclick="window.submitLivery()" id="liverySubmitBtn" style="background: #2ecc71; color: white; margin-top: 14px;">Опубликовать ливрею</button>
+                    <div id="liveryFormError" style="color: #ff4d4d; font-size: 12px; margin-top: 5px; display: none; text-align: center;"></div>
                 </div>
             </div>
         </div>
@@ -1835,15 +1973,7 @@
         window.closeMenu = function() {
             mobileMenuBtn.classList.remove('active');
             navContainer.classList.remove('active');
-            document.getElementById('fleetDropdown').classList.remove('active');
             document.getElementById('langDropdown').classList.remove('active');
-        };
-
-        window.toggleMobileDropdown = function(e) {
-            if (window.innerWidth <= 768) {
-                e.preventDefault();
-                document.getElementById('fleetDropdown').classList.toggle('active');
-            }
         };
 
         window.toggleMobileLang = function(e) {
@@ -1876,6 +2006,7 @@
             
             renderRecentFlights();
             window.renderEventsCarousel(); 
+            window.renderLiveriesPublic();
             window.updateProfileWidget();
             if (window.innerWidth <= 768) closeMenu();
         };
@@ -2113,6 +2244,233 @@
                 } catch (error) {
                     console.error("Ошибка удаления ивента:", error);
                     alert("Произошла ошибка при удалении.");
+                }
+            }
+        };
+
+        // ================= ЛИВРЕИ =================
+        window.allLiveries = [];
+        window.editingLiveryId = null;
+
+        function escapeHtml(str) {
+            if (str === undefined || str === null) return '';
+            return String(str)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function safeUrl(url) {
+            const u = (url || '').trim();
+            if (/^https?:\/\//i.test(u)) return u;
+            return '#';
+        }
+
+        function listenToLiveries() {
+            onSnapshot(collection(db, 'liveries'), (snapshot) => {
+                let liveries = [];
+                snapshot.forEach(docSnap => {
+                    liveries.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                liveries.sort((a, b) => (a.aircraft || '').localeCompare(b.aircraft || '')) ;
+                window.allLiveries = liveries;
+                window.renderLiveriesPublic();
+                window.renderLiveriesAdminList();
+            }, (error) => {
+                console.error('Ошибка чтения ливрей из Firebase:', error);
+            });
+        }
+
+        window.renderLiveriesPublic = function() {
+            const grid = document.getElementById('liveriesGrid');
+            if (!grid) return;
+
+            if (window.allLiveries.length === 0) {
+                grid.innerHTML = `<div class="livery-empty">${currentLang === 'en' ? 'No liveries added yet.' : 'Ливреи пока не добавлены'}</div>`;
+                return;
+            }
+
+            let html = '';
+            window.allLiveries.forEach(liv => {
+                const img = liv.img && liv.img.trim() !== '' ? liv.img : 'https://i.imgur.com/kFSOdpY.png';
+                const sources = Array.isArray(liv.sources) ? liv.sources : [];
+                const sourcesHtml = sources.map(src => {
+                    const text = escapeHtml(src.text && src.text.trim() !== '' ? src.text : 'Скачать');
+                    return `<a href="${safeUrl(src.link)}" target="_blank" rel="noopener noreferrer" class="livery-source-link">${text}</a>`;
+                }).join('');
+
+                html += `
+                    <div class="card livery-card">
+                        <div class="livery-photo-wrap"><img src="${escapeHtml(img)}" alt="${escapeHtml(liv.title)}" loading="lazy"></div>
+                        <div class="livery-body">
+                            <div class="livery-aircraft">${escapeHtml(liv.aircraft)}</div>
+                            <div class="livery-title">${escapeHtml(liv.title)}</div>
+                            <div class="livery-sources">${sourcesHtml}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            grid.innerHTML = html;
+        };
+
+        window.renderLiveriesAdminList = function() {
+            const list = document.getElementById('liveriesAdminList');
+            if (!list) return;
+
+            if (!window.isAdmin()) {
+                list.innerHTML = `<div style="text-align:center; color:#666; padding: 15px; font-size: 12px;">Доступно только администраторам.</div>`;
+                return;
+            }
+
+            if (window.allLiveries.length === 0) {
+                list.innerHTML = `<div style="text-align:center; color:#666; padding: 15px; font-size: 12px;">Ливреи пока не добавлены.</div>`;
+                return;
+            }
+
+            let html = '';
+            window.allLiveries.forEach(liv => {
+                html += `
+                    <div class="livery-admin-row">
+                        <span class="livery-admin-name">${escapeHtml(liv.title)} <span>(${escapeHtml(liv.aircraft)})</span></span>
+                        <div class="livery-admin-actions">
+                            <button class="livery-admin-btn edit" title="Изменить" onclick="window.openEditLiveryModal('${liv.id}')">✏️</button>
+                            <button class="livery-admin-btn del" title="Удалить" onclick="window.deleteLivery('${liv.id}')">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        };
+
+        window.addLiverySourceRow = function(text, link) {
+            const container = document.getElementById('liverySourcesContainer');
+            const row = document.createElement('div');
+            row.className = 'livery-source-row';
+            row.innerHTML = `
+                <input type="text" class="livery-source-text" placeholder="Текст (например, Скачать с сайта)" value="${escapeHtml(text || '')}">
+                <input type="text" class="livery-source-link" placeholder="https://..." value="${escapeHtml(link || '')}">
+                <button type="button" class="remove-source-btn" onclick="this.parentElement.remove()">✕</button>
+            `;
+            container.appendChild(row);
+        };
+
+        function resetLiveryForm() {
+            document.getElementById('liveryImg').value = '';
+            document.getElementById('liveryAircraft').value = '';
+            document.getElementById('liveryTitle').value = '';
+            document.getElementById('liverySourcesContainer').innerHTML = '';
+            const errDiv = document.getElementById('liveryFormError');
+            if (errDiv) errDiv.style.display = 'none';
+            window.addLiverySourceRow();
+        }
+
+        window.openAddLiveryModal = function() {
+            if (!window.isAdmin()) {
+                alert('Только администратор может добавлять ливреи!');
+                return;
+            }
+            window.editingLiveryId = null;
+            resetLiveryForm();
+            document.getElementById('liveryModalHeader').textContent = 'Добавить ливрею';
+            document.getElementById('liverySubmitBtn').textContent = 'Опубликовать ливрею';
+            document.getElementById('addLiveryModal').classList.add('open');
+        };
+
+        window.openEditLiveryModal = function(id) {
+            if (!window.isAdmin()) {
+                alert('Только администратор может редактировать ливреи!');
+                return;
+            }
+            const liv = window.allLiveries.find(l => l.id === id);
+            if (!liv) return;
+
+            window.editingLiveryId = id;
+            document.getElementById('liveryImg').value = liv.img || '';
+            document.getElementById('liveryAircraft').value = liv.aircraft || '';
+            document.getElementById('liveryTitle').value = liv.title || '';
+
+            const container = document.getElementById('liverySourcesContainer');
+            container.innerHTML = '';
+            const sources = Array.isArray(liv.sources) && liv.sources.length > 0 ? liv.sources : [{ text: '', link: '' }];
+            sources.forEach(src => window.addLiverySourceRow(src.text, src.link));
+
+            const errDiv = document.getElementById('liveryFormError');
+            if (errDiv) errDiv.style.display = 'none';
+
+            document.getElementById('liveryModalHeader').textContent = 'Изменить ливрею';
+            document.getElementById('liverySubmitBtn').textContent = 'Сохранить изменения';
+            document.getElementById('addLiveryModal').classList.add('open');
+        };
+
+        window.closeLiveryModal = function() {
+            document.getElementById('addLiveryModal').classList.remove('open');
+            window.editingLiveryId = null;
+        };
+
+        window.submitLivery = async function() {
+            if (!window.isAdmin()) {
+                alert('Только администратор может публиковать ливреи!');
+                return;
+            }
+
+            const img = document.getElementById('liveryImg').value.trim();
+            const aircraft = document.getElementById('liveryAircraft').value.trim();
+            const title = document.getElementById('liveryTitle').value.trim();
+            const errDiv = document.getElementById('liveryFormError');
+
+            if (!img || !aircraft || !title) {
+                if (errDiv) {
+                    errDiv.textContent = 'Заполните фото, самолет и название ливреи!';
+                    errDiv.style.display = 'block';
+                }
+                return;
+            }
+
+            const sources = [];
+            document.querySelectorAll('#liverySourcesContainer .livery-source-row').forEach(row => {
+                const text = row.querySelector('.livery-source-text').value.trim();
+                const link = row.querySelector('.livery-source-link').value.trim();
+                if (text && link) sources.push({ text, link });
+            });
+
+            const liveryData = { img, aircraft, title, sources, updatedAt: new Date().toISOString() };
+
+            try {
+                if (window.editingLiveryId) {
+                    await setDoc(doc(db, 'liveries', window.editingLiveryId), liveryData, { merge: true });
+                    await window.logAudit('Изменение ливреи', `${title} (${aircraft})`);
+                } else {
+                    liveryData.addedAt = new Date().toISOString();
+                    await addDoc(collection(db, 'liveries'), liveryData);
+                    await window.logAudit('Добавление ливреи', `${title} (${aircraft})`);
+                }
+                window.closeLiveryModal();
+            } catch (error) {
+                console.error('Ошибка сохранения ливреи:', error);
+                if (errDiv) {
+                    errDiv.textContent = 'Произошла ошибка при сохранении. Попробуйте снова.';
+                    errDiv.style.display = 'block';
+                }
+            }
+        };
+
+        window.deleteLivery = async function(id) {
+            if (!window.isAdmin()) {
+                alert('Только администратор может удалять ливреи!');
+                return;
+            }
+            const liv = window.allLiveries.find(l => l.id === id);
+            if (!liv) return;
+
+            if (confirm(`Удалить ливрею "${liv.title}" (${liv.aircraft})?`)) {
+                try {
+                    await deleteDoc(doc(db, 'liveries', id));
+                    await window.logAudit('Удаление ливреи', `${liv.title} (${liv.aircraft})`);
+                } catch (error) {
+                    console.error('Ошибка удаления ливреи:', error);
+                    alert('Произошла ошибка при удалении.');
                 }
             }
         };
@@ -2455,6 +2813,7 @@
                 if (window.lastVatsimData) renderRoster(window.lastVatsimData); 
                 renderRecentFlights(); 
                 window.renderEventsCarousel(); 
+                window.renderLiveriesAdminList();
                 window.renderAuditLogs();
                 const roleLabel = window.currentAdminRole === 'founder' ? 'Основатель' : 'Администратор';
                 alert(`Доступ подтвержден! Ваша роль: ${roleLabel}.`);
@@ -2474,6 +2833,7 @@
             if (window.lastVatsimData) renderRoster(window.lastVatsimData);
             renderRecentFlights();
             window.renderEventsCarousel(); 
+            window.renderLiveriesAdminList();
             window.renderAuditLogs();
             document.getElementById('adminPanelModal').classList.remove('open');
         };
@@ -2910,6 +3270,7 @@
             await restoreAdminSession(); 
 
             listenToEvents(); 
+            listenToLiveries();
             listenToPilots(); 
             listenToAdmins(); 
             listenToAuditLogs();
