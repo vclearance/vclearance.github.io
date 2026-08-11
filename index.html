@@ -686,6 +686,34 @@
             width: 100%;
             grid-column: 1 / -1;
         }
+        .livery-card.outdated {
+            position: relative;
+        }
+        .livery-card.outdated .livery-photo-wrap img {
+            filter: grayscale(85%) brightness(0.55);
+        }
+        .livery-card.outdated .livery-body {
+            opacity: 0.55;
+        }
+        .livery-card.outdated:hover .livery-photo-wrap img {
+            transform: none;
+        }
+        .livery-outdated-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 2;
+            background: rgba(0, 0, 0, 0.75);
+            color: #ff8080;
+            border: 1px solid rgba(255, 77, 77, 0.4);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 700;
+            padding: 4px 9px;
+            border-radius: 5px;
+            backdrop-filter: blur(2px);
+        }
 
         /* ================= АДМИНКА: ЛИВРЕИ ================= */
         .livery-admin-row {
@@ -1797,6 +1825,11 @@
                     <div id="liverySourcesContainer"></div>
                     <button type="button" class="add-source-btn" onclick="window.addLiverySourceRow()">+ Добавить источник</button>
 
+                    <label style="display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12px; color: #ccc; cursor: pointer;">
+                        <input type="checkbox" id="liveryOutdated" style="width: auto; margin: 0; cursor: pointer;">
+                        Старая / устаревшая ливрея
+                    </label>
+
                     <button onclick="window.submitLivery()" id="liverySubmitBtn" style="background: #2ecc71; color: white; margin-top: 14px;">Опубликовать ливрею</button>
                     <div id="liveryFormError" style="color: #ff4d4d; font-size: 12px; margin-top: 5px; display: none; text-align: center;"></div>
                 </div>
@@ -2301,8 +2334,14 @@
                     return `<a href="${safeUrl(src.link)}" target="_blank" rel="noopener noreferrer" class="livery-source-link">${text}</a>`;
                 }).join('');
 
+                const outdatedClass = liv.outdated ? ' outdated' : '';
+                const outdatedBadge = liv.outdated
+                    ? `<div class="livery-outdated-badge">${currentLang === 'en' ? 'Outdated' : 'Устаревшая'}</div>`
+                    : '';
+
                 html += `
-                    <div class="card livery-card">
+                    <div class="card livery-card${outdatedClass}">
+                        ${outdatedBadge}
                         <div class="livery-photo-wrap"><img src="${escapeHtml(img)}" alt="${escapeHtml(liv.title)}" loading="lazy"></div>
                         <div class="livery-body">
                             <div class="livery-aircraft">${escapeHtml(liv.aircraft)}</div>
@@ -2331,9 +2370,10 @@
 
             let html = '';
             window.allLiveries.forEach(liv => {
+                const outdatedTag = liv.outdated ? ' <span style="color:#ff8080; font-weight:700;">[устар.]</span>' : '';
                 html += `
                     <div class="livery-admin-row">
-                        <span class="livery-admin-name">${escapeHtml(liv.title)} <span>(${escapeHtml(liv.aircraft)})</span></span>
+                        <span class="livery-admin-name">${escapeHtml(liv.title)} <span>(${escapeHtml(liv.aircraft)})</span>${outdatedTag}</span>
                         <div class="livery-admin-actions">
                             <button class="livery-admin-btn edit" title="Изменить" onclick="window.openEditLiveryModal('${liv.id}')">✏️</button>
                             <button class="livery-admin-btn del" title="Удалить" onclick="window.deleteLivery('${liv.id}')">🗑️</button>
@@ -2361,6 +2401,7 @@
             document.getElementById('liveryAircraft').value = '';
             document.getElementById('liveryTitle').value = '';
             document.getElementById('liverySourcesContainer').innerHTML = '';
+            document.getElementById('liveryOutdated').checked = false;
             const errDiv = document.getElementById('liveryFormError');
             if (errDiv) errDiv.style.display = 'none';
             window.addLiverySourceRow();
@@ -2395,6 +2436,8 @@
             container.innerHTML = '';
             const sources = Array.isArray(liv.sources) && liv.sources.length > 0 ? liv.sources : [{ text: '', link: '' }];
             sources.forEach(src => window.addLiverySourceRow(src.text, src.link));
+
+            document.getElementById('liveryOutdated').checked = !!liv.outdated;
 
             const errDiv = document.getElementById('liveryFormError');
             if (errDiv) errDiv.style.display = 'none';
@@ -2435,7 +2478,9 @@
                 if (text && link) sources.push({ text, link });
             });
 
-            const liveryData = { img, aircraft, title, sources, updatedAt: new Date().toISOString() };
+            const outdated = document.getElementById('liveryOutdated').checked;
+
+            const liveryData = { img, aircraft, title, sources, outdated, updatedAt: new Date().toISOString() };
 
             try {
                 if (window.editingLiveryId) {
