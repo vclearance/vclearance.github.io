@@ -1636,6 +1636,104 @@
             .grid { grid-template-columns: 1fr; }
             .card { padding: 30px 20px; }
         }
+
+        /* ================= ДАШБОРД УПРАВЛЕНИЯ УЧАСТНИКАМИ ================= */
+        .fullscreen-modal {
+            padding: 0;
+        }
+        .fullscreen-modal .modal-content {
+            max-width: 100%;
+            width: 100vw;
+            height: 100vh;
+            max-height: 100vh;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 25px;
+        }
+
+        .dashboard-stats { 
+            display: flex; 
+            gap: 15px; 
+            margin-bottom: 20px; 
+        }
+        .stat-card { 
+            flex: 1; 
+            background: rgba(255,255,255,0.03); 
+            padding: 15px; 
+            border-radius: 10px; 
+            text-align: center; 
+            border: 1px solid rgba(255,255,255,0.08); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .stat-card h4 { 
+            color: #888; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            margin-bottom: 8px; 
+            letter-spacing: 0.5px;
+        }
+        .stat-card .num { 
+            font-size: 28px; 
+            font-weight: 700; 
+            color: #2ecc71; 
+        }
+
+        .time-filters { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 20px; 
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 15px;
+        }
+        .filter-btn { 
+            padding: 8px 16px; 
+            background: rgba(255,255,255,0.05); 
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 6px; 
+            color: #ccc; 
+            cursor: pointer; 
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .filter-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .filter-btn.active { background: #2ecc71; color: white; border-color: #2ecc71; box-shadow: 0 0 10px rgba(46, 204, 113, 0.3); }
+
+        .dashboard-grid { 
+            display: grid; 
+            grid-template-columns: 2fr 1fr; 
+            grid-template-rows: auto auto;
+            gap: 20px; 
+        }
+        .dashboard-section-full {
+            grid-column: 1 / -1;
+        }
+        @media (max-width: 1100px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+
+        .dashboard-section { 
+            background: rgba(0,0,0,0.2); 
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(255,255,255,0.05); 
+            display: flex;
+            flex-direction: column;
+        }
+        .dashboard-section h3 {
+            font-size: 14px; 
+            text-transform: uppercase; 
+            color: #fff; 
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .dashboard-scroll-area {
+            padding-right: 5px;
+        }
+        .dashboard-scroll-area::-webkit-scrollbar { width: 4px; }
+        .dashboard-scroll-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -1895,6 +1993,11 @@
             <div class="modal-body">
                 <div id="adminPanelRoleInfo" style="font-size: 12px; color: #aaa; margin-bottom: 18px; text-align: center;"></div>
                 
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(52, 152, 219, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(52, 152, 219, 0.3);">
+                    <h3 style="font-size: 13px; text-transform: uppercase; color: #3498db; margin: 0;">Дашборд CRM</h3>
+                    <button onclick="window.openMemberManagement()" style="background: #3498db; color: white; font-size: 11px; padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; text-transform: uppercase;">📊 Управление участниками</button>
+                </div>
+
                 <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;">Добавить нового пилота</h3>
                 <div class="profile-login-form" style="margin-bottom: 30px;">
                     <input type="text" id="newPilotCid" placeholder="VATSIM CID (например, 1999888)">
@@ -2007,6 +2110,66 @@
                     <button onclick="window.submitLivery()" id="liverySubmitBtn" style="background: #2ecc71; color: white; margin-top: 14px;">Опубликовать ливрею</button>
                     <div id="liveryFormError" style="color: #ff4d4d; font-size: 12px; margin-top: 5px; display: none; text-align: center;"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fullscreen-modal" id="memberManagementModal">
+        <div class="modal-content">
+            <button class="close-modal-btn" onclick="document.getElementById('memberManagementModal').classList.remove('open')">&times;</button>
+            <div class="modal-header">Аналитика и управление участниками</div>
+            <div class="modal-body" style="flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 0;">
+                
+                <div class="dashboard-stats">
+                    <div class="stat-card"><h4>Сегодня</h4><div class="num" id="statToday">0</div></div>
+                    <div class="stat-card"><h4>За неделю</h4><div class="num" id="statWeek">0</div></div>
+                    <div class="stat-card"><h4>За все время</h4><div class="num" id="statAll">0</div></div>
+                </div>
+                
+                <div class="time-filters" id="memberTimeFilters">
+                    <button class="filter-btn active" onclick="window.renderMemberDashboard('all')">За все время</button>
+                    <button class="filter-btn" onclick="window.renderMemberDashboard('week')">За неделю</button>
+                    <button class="filter-btn" onclick="window.renderMemberDashboard('today')">Сегодня</button>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="dashboard-section">
+                        <h3>Ростер и активность</h3>
+                        <div class="dashboard-scroll-area">
+                            <table class="roster-table" style="font-size: 12px;">
+                                <thead><tr><th>Пилот (CID)</th><th>Discord</th><th>Полеты</th><th>Действия</th></tr></thead>
+                                <tbody id="dashboardRosterBody"></tbody>
+                            </table>
+                            
+                            <h3 style="margin-top: 25px; color: #e74c3c; border-bottom-color: rgba(231,76,60,0.2);">Без активности (за период)</h3>
+                            <table class="roster-table" style="font-size: 12px;">
+                                <thead><tr><th>Пилот (CID)</th><th>Discord</th><th>Действия</th></tr></thead>
+                                <tbody id="dashboardInactiveBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-section">
+                        <h3>Топ пилотов</h3>
+                        <div class="dashboard-scroll-area" id="dashboardTopPilots"></div>
+                    </div>
+
+                    <div class="dashboard-section dashboard-section-full">
+                        <h3>Журнал полетов</h3>
+                        <div class="dashboard-scroll-area">
+                            <table class="roster-table" style="font-size: 11px;">
+                                <thead><tr><th>Дата</th><th>Пилот</th><th>Маршрут</th></tr></thead>
+                                <tbody id="dashboardRecentBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-controls" style="margin-top: 15px;">
+                            <button id="dashboardRecentPrevBtn" onclick="window.changeDashboardRecentPage(-1)">◀</button>
+                            <span id="dashboardRecentPageIndicator" style="font-size: 13px; color: #ccc;">Страница 1 / 1</span>
+                            <button id="dashboardRecentNextBtn" onclick="window.changeDashboardRecentPage(1)">▶</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -2162,6 +2325,8 @@
 
         window.recentFlightsData = [];
         window.currentRecentPage = 1;
+        window.currentDashboardRecentPage = 1;
+        const DASHBOARD_FLIGHTS_PER_PAGE = 50;
         const FLIGHTS_PER_PAGE = 10;
 
         // Склонение слова "вылет" по числу (1 вылет, 2 вылета, 5 вылетов).
@@ -2775,6 +2940,121 @@
                     alert('Произошла ошибка при удалении.');
                 }
             }
+        };
+
+        // ================= УПРАВЛЕНИЕ УЧАСТНИКАМИ (ДАШБОРД) =================
+
+        window.openMemberManagement = function() {
+            document.getElementById('memberManagementModal').classList.add('open');
+            window.renderMemberDashboard('all'); 
+        };
+
+        window.renderMemberDashboard = function(timeRange) {
+            
+            document.querySelectorAll('#memberTimeFilters .filter-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = Array.from(document.querySelectorAll('#memberTimeFilters .filter-btn'))
+                                .find(b => b.getAttribute('onclick').includes(timeRange));
+            if(activeBtn) activeBtn.classList.add('active');
+
+            
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const msWeek = 7 * 24 * 60 * 60 * 1000;
+
+            const flights = window.recentFlightsData || [];
+            
+            let cToday = 0, cWeek = 0, cAll = flights.length;
+            flights.forEach(f => {
+                const fTime = new Date(f.timestamp).getTime();
+                if (fTime >= startOfToday) cToday++;
+                if (now.getTime() - fTime <= msWeek) cWeek++;
+            });
+
+            document.getElementById('statToday').textContent = cToday;
+            document.getElementById('statWeek').textContent = cWeek;
+            document.getElementById('statAll').textContent = cAll;
+
+            
+            let filteredFlights = [];
+            if (timeRange === 'today') filteredFlights = flights.filter(f => new Date(f.timestamp).getTime() >= startOfToday);
+            else if (timeRange === 'week') filteredFlights = flights.filter(f => now.getTime() - new Date(f.timestamp).getTime() <= msWeek);
+            else filteredFlights = flights;
+
+            
+            window.dashboardFilteredFlights = filteredFlights;
+            window.currentDashboardRecentPage = 1;
+            window.renderDashboardRecentFlights();
+
+            
+            const pilotCounts = {};
+            filteredFlights.forEach(f => {
+                if(!f.cid) return;
+                pilotCounts[f.cid.toString()] = (pilotCounts[f.cid.toString()] || 0) + 1;
+            });
+
+            const topPilotsHtml = Object.entries(pilotCounts)
+                .map(([cid, count]) => {
+                    const pilot = window.MY_PILOTS.find(p => p.cid.toString() === cid) || { name: 'Неизвестный', cid: cid };
+                    return { cid, name: pilot.name, count };
+                })
+                .sort((a,b) => b.count - a.count)
+                .slice(0, 20) 
+                .map((p, i) => `
+                    <div class="top-active-item" style="padding: 10px; background: rgba(255,255,255,0.03); margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.03);">
+                        <div class="top-active-rank" style="width:24px;height:24px;">${i+1}</div>
+                        <div class="top-active-info" style="flex-direction:row; justify-content:space-between; align-items:center;">
+                            <span class="top-active-name" style="font-size:13px;">${p.name} <span style="color:#666; font-size:10px;">(${p.cid})</span></span>
+                            <div class="top-active-count" style="font-size:12px;">${p.count}</div>
+                        </div>
+                    </div>
+                `).join('') || '<div style="text-align:center; color:#666; font-size: 12px; padding: 20px;">Нет данных</div>';
+            
+            document.getElementById('dashboardTopPilots').innerHTML = topPilotsHtml;
+
+            
+            const activePilots = [];
+            const inactivePilots = [];
+            
+            window.MY_PILOTS.forEach(p => {
+                const count = pilotCounts[p.cid.toString()] || 0;
+                if(count > 0) activePilots.push({...p, count});
+                else inactivePilots.push(p);
+            });
+            
+            activePilots.sort((a,b) => b.count - a.count);
+
+            function generateRosterRow(p, isInactive) {
+                const discord = window.discordMap ? (window.discordMap[p.cid.toString()] || '---') : '---';
+                const isBase = BASE_PILOTS.some(bp => bp.cid.toString() === p.cid.toString());
+                
+                let delBtn = !isBase ? `<button onclick="if(confirm('Удалить ${p.name}?')){ window.deletePilot('${p.cid}'); setTimeout(()=>window.renderMemberDashboard('${timeRange}'), 500); }" style="background:#e74c3c;color:white;border:none;padding:4px 8px;border-radius:4px;font-size:10px;cursor:pointer;">🗑️</button>` : '';
+                
+                let adminBtn = '';
+                if (window.isFounder()) {
+                    const role = window.adminsMap ? window.adminsMap[p.cid.toString()] : null;
+                    if(role !== 'founder') {
+                        if(role) adminBtn = `<button onclick="window.removeAdminPilot('${p.cid}'); setTimeout(()=>window.renderMemberDashboard('${timeRange}'), 500);" style="background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);padding:3px 6px;border-radius:4px;font-size:10px;cursor:pointer;">- Админ</button>`;
+                        else adminBtn = `<button onclick="window.openAddAdminModalFor('${p.cid}', '${p.name.replace(/'/g, "\\'")}');" style="background:rgba(46,204,113,0.15);color:#2ecc71;border:1px solid rgba(46,204,113,0.3);padding:3px 6px;border-radius:4px;font-size:10px;cursor:pointer;">+ Админ</button>`;
+                    }
+                }
+                
+                const countTd = !isInactive ? `<td style="color:#2ecc71;font-weight:bold;text-align:center;">${p.count}</td>` : '';
+
+                return `
+                    <tr>
+                        <td><strong>${p.name}</strong> <span style="color:#666;font-size:10px;display:block;">${p.cid}</span></td>
+                        <td><span style="font-family:monospace;color:#aaa;font-size:11px;">${discord}</span></td>
+                        ${countTd}
+                        <td style="vertical-align:middle;"><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">${delBtn}${adminBtn}</div></td>
+                    </tr>
+                `;
+            }
+
+            document.getElementById('dashboardRosterBody').innerHTML = activePilots.map(p => generateRosterRow(p, false))
+                .join('') || `<tr><td colspan="4" style="text-align:center; padding: 20px; color:#666;">Нет активных пилотов</td></tr>`;
+
+            document.getElementById('dashboardInactiveBody').innerHTML = inactivePilots.map(p => generateRosterRow(p, true))
+                .join('') || `<tr><td colspan="3" style="text-align:center; padding: 20px; color:#666;">Все пилоты летали!</td></tr>`;
         };
 
         // ================= ОСТАЛЬНОЙ КОД (VATSIM, РОСТЕР И ИСТОРИЯ) =================
@@ -3681,6 +3961,46 @@
         window.changeRecentPage = function(direction) {
             window.currentRecentPage += direction;
             renderRecentFlights();
+        };
+
+        window.renderDashboardRecentFlights = function() {
+            const recentBody = document.getElementById('dashboardRecentBody');
+            if (!recentBody) return;
+
+            const flights = window.dashboardFilteredFlights || [];
+
+            if (flights.length === 0) {
+                recentBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color: #666;">Нет данных за этот период</td></tr>`;
+                document.getElementById('dashboardRecentPageIndicator').textContent = 'Страница 1 / 1';
+                document.getElementById('dashboardRecentPrevBtn').disabled = true;
+                document.getElementById('dashboardRecentNextBtn').disabled = true;
+                return;
+            }
+
+            const totalPages = Math.ceil(flights.length / DASHBOARD_FLIGHTS_PER_PAGE);
+            if (window.currentDashboardRecentPage > totalPages) window.currentDashboardRecentPage = totalPages;
+            if (window.currentDashboardRecentPage < 1) window.currentDashboardRecentPage = 1;
+
+            const startIndex = (window.currentDashboardRecentPage - 1) * DASHBOARD_FLIGHTS_PER_PAGE;
+            const endIndex = startIndex + DASHBOARD_FLIGHTS_PER_PAGE;
+            const pageFlights = flights.slice(startIndex, endIndex);
+
+            recentBody.innerHTML = pageFlights.map(f => `
+                <tr>
+                    <td style="color:#aaa;">${new Date(f.timestamp).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</td>
+                    <td><strong>${f.name}</strong> <span style="color:#666;">(${f.cid})</span></td>
+                    <td>${f.route}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('dashboardRecentPageIndicator').textContent = `Страница ${window.currentDashboardRecentPage} / ${totalPages}`;
+            document.getElementById('dashboardRecentPrevBtn').disabled = window.currentDashboardRecentPage === 1;
+            document.getElementById('dashboardRecentNextBtn').disabled = window.currentDashboardRecentPage === totalPages;
+        };
+
+        window.changeDashboardRecentPage = function(direction) {
+            window.currentDashboardRecentPage += direction;
+            window.renderDashboardRecentFlights();
         };
 
         async function initApp() {  
