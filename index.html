@@ -2283,6 +2283,80 @@
             });
         }
 
+        // --- Discord-теги пилотов (видно только администраторам) ---
+        window.discordMap = {};
+        function listenToPilotDiscord() {
+            onSnapshot(collection(db, 'pilot_discord'), (snapshot) => {
+                const map = {};
+                snapshot.forEach((docSnap) => {
+                    map[docSnap.id] = docSnap.data().discord || '';
+                });
+                window.discordMap = map;
+                if (window.lastVatsimData) renderRoster(window.lastVatsimData);
+                else renderRoster({ pilots: [], controllers: [] });
+            });
+        }
+
+        window.editPilotDiscord = function(cid) {
+            if (!window.isAdmin()) return;
+            const container = document.getElementById(`discordValue-${cid}`);
+            if (!container) return;
+            const currentValue = window.discordMap ? (window.discordMap[cid.toString()] || '') : '';
+            const safeValue = currentValue.replace(/"/g, '&quot;');
+            container.innerHTML = `
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <input type="text" id="discordInput-${cid}" value="${safeValue}" placeholder="username#0000" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 13px; width: 150px;">
+                    <button class="livery-admin-btn edit" title="Сохранить" onclick="event.stopPropagation(); window.savePilotDiscord('${cid}')">💾</button>
+                    <button class="livery-admin-btn del" title="Отмена" onclick="event.stopPropagation(); window.cancelPilotDiscordEdit('${cid}')">✕</button>
+                </div>
+            `;
+            const inputEl = document.getElementById(`discordInput-${cid}`);
+            if (inputEl) {
+                inputEl.addEventListener('click', (e) => e.stopPropagation());
+                inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); window.savePilotDiscord(cid); }
+                    if (e.key === 'Escape') { e.preventDefault(); window.cancelPilotDiscordEdit(cid); }
+                });
+                inputEl.focus();
+            }
+        };
+
+        window.cancelPilotDiscordEdit = function(cid) {
+            if (window.lastVatsimData) renderRoster(window.lastVatsimData);
+            else renderRoster({ pilots: [], controllers: [] });
+        };
+
+        window.savePilotDiscord = async function(cid) {
+            if (!window.isAdmin()) return;
+            const inputEl = document.getElementById(`discordInput-${cid}`);
+            if (!inputEl) return;
+            const value = inputEl.value.trim();
+            try {
+                if (!value) {
+                    await deleteDoc(doc(db, 'pilot_discord', cid.toString()));
+                    window.logAudit('discord_remove', `CID ${cid}`);
+                } else {
+                    await setDoc(doc(db, 'pilot_discord', cid.toString()), { discord: value }, { merge: true });
+                    window.logAudit('discord_set', `CID ${cid} -> ${value}`);
+                }
+            } catch (error) {
+                console.error('Ошибка сохранения Discord:', error);
+                alert('Не удалось сохранить Discord. Попробуйте еще раз.');
+            }
+        };
+
+        window.deletePilotDiscord = async function(cid) {
+            if (!window.isAdmin()) return;
+            if (!confirm('Удалить Discord этого пилота?')) return;
+            try {
+                await deleteDoc(doc(db, 'pilot_discord', cid.toString()));
+                window.logAudit('discord_remove', `CID ${cid}`);
+            } catch (error) {
+                console.error('Ошибка удаления Discord:', error);
+                alert('Не удалось удалить Discord. Попробуйте еще раз.');
+            }
+        };
+
         // ================= ИВЕНТЫ: СЛУШАТЕЛЬ И ЛОГИКА КАРУСЕЛИ =================
         window.allEvents = [];
         window.currentEventIndex = 0;
@@ -3020,6 +3094,25 @@
                     detailsTr.classList.add('open');
                 }
 
+                let discordDetailHtml = '';
+                if (isAdmin) {
+                    const discordValue = window.discordMap ? (window.discordMap[localPilot.cid.toString()] || '') : '';
+                    const discordInner = discordValue
+                        ? `<span style="display:flex; align-items:center; gap:6px;">
+                                <span style="font-family:monospace; color:#fff;">${escapeHtml(discordValue)}</span>
+                                <button class="livery-admin-btn edit" title="Изменить" onclick="event.stopPropagation(); window.editPilotDiscord('${localPilot.cid}')">✏️</button>
+                                <button class="livery-admin-btn del" title="Удалить" onclick="event.stopPropagation(); window.deletePilotDiscord('${localPilot.cid}')">🗑️</button>
+                           </span>`
+                        : `<button class="livery-admin-btn edit" title="Добавить Discord" onclick="event.stopPropagation(); window.editPilotDiscord('${localPilot.cid}')" style="width:auto; padding:2px 10px;">+ ${currentLang === 'en' ? 'Add' : 'Добавить'}</button>`;
+
+                    discordDetailHtml = `
+                        <div class="pilot-detail-item">
+                            <span>DISCORD</span>
+                            <span id="discordValue-${localPilot.cid}">${discordInner}</span>
+                        </div>
+                    `;
+                }
+
                 detailsTr.innerHTML = `
                     <td colspan="5">
                         <div class="pilot-details-wrapper">
@@ -3036,6 +3129,7 @@
                                     <span>${currentLang === 'en' ? 'Route' : 'Маршрут'}</span>
                                     <span>${detailRoute}</span>
                                 </div>
+                                ${discordDetailHtml}
                                 <a href="https://stats.vatsim.net/stats/${localPilot.cid}" target="_blank" class="pilot-stats-link">
                                     ${currentLang === 'en' ? 'VATSIM Stats' : 'Статистика VATSIM'}
                                 </a>
@@ -3596,6 +3690,7 @@
             listenToLiveries();
             listenToPilots(); 
             listenToAdmins(); 
+            listenToPilotDiscord();
             listenToAuditLogs();
             listenToRecentFlights();
             
