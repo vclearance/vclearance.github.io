@@ -1003,7 +1003,8 @@
             background: rgba(20, 20, 20, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 12px;
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
             width: 100%;
         }
 
@@ -1044,12 +1045,149 @@
             box-shadow: 0 6px 20px rgba(0,0,0,0.5);
         }
 
+        /* ЛЕЙАУТ: РОСТЕР + БОКОВАЯ ПАНЕЛЬ "ТОП АКТИВНЫХ" */
+        .roster-layout {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .roster-main {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .roster-sidebar {
+            flex: 0 0 220px;
+            width: 220px;
+            position: sticky;
+            top: 90px;
+        }
+
+        .top-active-card {
+            background: rgba(20, 20, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 18px;
+        }
+
+        .top-active-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #fff;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .top-active-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .top-active-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 9px 6px;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .top-active-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .top-active-rank {
+            flex: 0 0 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.06);
+            color: #aaa;
+        }
+
+        .top-active-item:nth-child(1) .top-active-rank {
+            background: rgba(241, 196, 15, 0.18);
+            color: #f1c40f;
+        }
+
+        .top-active-item:nth-child(2) .top-active-rank {
+            background: rgba(189, 195, 199, 0.18);
+            color: #bdc3c7;
+        }
+
+        .top-active-item:nth-child(3) .top-active-rank {
+            background: rgba(230, 126, 34, 0.18);
+            color: #e67e22;
+        }
+
+        .top-active-info {
+            flex: 1 1 auto;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .top-active-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .top-active-cid {
+            font-size: 11px;
+            color: #666;
+        }
+
+        .top-active-count {
+            flex: 0 0 auto;
+            font-size: 12px;
+            font-weight: 700;
+            color: #2ecc71;
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.25);
+            padding: 3px 9px;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+
+        .top-active-empty {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        @media (max-width: 900px) {
+            .roster-layout {
+                flex-direction: column;
+            }
+
+            .roster-sidebar {
+                width: 100%;
+                flex: 1 1 auto;
+                position: static;
+            }
+        }
+
         .roster-table {
             width: 100%;
             border-collapse: collapse;
             text-align: left;
             font-size: 14px;
-            min-width: 600px;
+            min-width: 560px;
         }
 
         .roster-table th {
@@ -1107,8 +1245,14 @@
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
-            margin-left: 6px;
             letter-spacing: 0.3px;
+        }
+
+        .status-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
         }
 
         .role-badge-admin {
@@ -1130,6 +1274,16 @@
             font-size: 10px;
             font-weight: 700;
             margin-left: 8px;
+            white-space: nowrap;
+        }
+
+        /* Видно только админам: общее количество вылетов за клиренс */
+        .clr-count-inline {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 500;
+            color: #888;
+            margin-left: 4px;
             white-space: nowrap;
         }
 
@@ -1610,27 +1764,38 @@
         <div class="container">
             <h2 class="section-title lang" data-ru="Состав компании" data-en="Our Roster">Состав компании</h2>
             <div id="rosterAdminControls" style="margin-bottom: 15px; text-align: right;"></div>
-            <div class="roster-wrapper" id="rosterWrapper">
-                <table class="roster-table">
-                    <thead>
-                        <tr>
-                            <th class="lang" data-ru="Пилот / CID" data-en="Pilot / CID">Пилот / CID</th>
-                            <th class="lang" data-ru="Позывной" data-en="Callsign">Позывной</th>
-                            <th class="lang" data-ru="Тип ВС" data-en="Aircraft">Тип ВС</th>
-                            <th class="lang" data-ru="Маршрут" data-en="Route">Маршрут</th>
-                            <th class="lang" data-ru="Статус" data-en="Status">Статус</th>
-                        </tr>
-                    </thead>
-                    <tbody id="roster-tbody">
-                        </tbody>
-                </table>
-                <div id="rosterFadeOverlay" class="roster-fade-overlay"></div>
-            </div>
-            
-            <div id="rosterMoreContainer" style="text-align: center; margin-top: 22px; display: none;">
-                <button id="showMorePilotsBtn" class="btn-show-more" onclick="window.showMorePilots()">
-                    Показать больше
-                </button>
+            <div class="roster-layout">
+                <div class="roster-main">
+                    <div class="roster-wrapper" id="rosterWrapper">
+                        <table class="roster-table">
+                            <thead>
+                                <tr>
+                                    <th class="lang" data-ru="Пилот / CID" data-en="Pilot / CID">Пилот / CID</th>
+                                    <th class="lang" data-ru="Позывной" data-en="Callsign">Позывной</th>
+                                    <th class="lang" data-ru="Тип ВС" data-en="Aircraft">Тип ВС</th>
+                                    <th class="lang" data-ru="Маршрут" data-en="Route">Маршрут</th>
+                                    <th class="lang" data-ru="Статус" data-en="Status">Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody id="roster-tbody">
+                                </tbody>
+                        </table>
+                        <div id="rosterFadeOverlay" class="roster-fade-overlay"></div>
+                    </div>
+
+                    <div id="rosterMoreContainer" style="text-align: center; margin-top: 22px; display: none;">
+                        <button id="showMorePilotsBtn" class="btn-show-more" onclick="window.showMorePilots()">
+                            Показать больше
+                        </button>
+                    </div>
+                </div>
+
+                <aside class="roster-sidebar">
+                    <div class="top-active-card">
+                        <div class="top-active-title lang" data-ru="Топ самых активных" data-en="Most Active">Топ самых активных</div>
+                        <div class="top-active-list" id="topActiveList"></div>
+                    </div>
+                </aside>
             </div>
         </div>
     </section>
@@ -1998,6 +2163,15 @@
         window.recentFlightsData = [];
         window.currentRecentPage = 1;
         const FLIGHTS_PER_PAGE = 10;
+
+        // Склонение слова "вылет" по числу (1 вылет, 2 вылета, 5 вылетов).
+        function pluralizeFlights(n) {
+            const mod10 = n % 10;
+            const mod100 = n % 100;
+            if (mod10 === 1 && mod100 !== 11) return 'вылет';
+            if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'вылета';
+            return 'вылетов';
+        }
 
         function cleanAircraftType(aircraftStr) {
             if (!aircraftStr) return '---';
@@ -2552,6 +2726,7 @@
             onSnapshot(q, (snapshot) => {
                 window.recentFlightsData = snapshot.docs.map(d => ({ ...d.data(), docId: d.id }));
                 renderRecentFlights();
+                renderTopActive();
                 // Обновляем ростер, чтобы у админа сразу пересчиталась дата
                 // последнего вылета за клиренс (виджет виден только админам).
                 if (window.isAdmin && window.isAdmin()) {
@@ -2567,10 +2742,12 @@
         // <=15 дней — зелёный, <=30 — жёлтый, <=90 — оранжевый, 90+ — красный.
         function getLastClearanceFlightInfo(cid) {
             const flights = (window.recentFlightsData || []).filter(f => f.cid && f.cid.toString() === cid.toString());
+            const count = flights.length;
             if (flights.length === 0) {
                 return {
                     text: currentLang === 'en' ? 'No CLR flights yet' : 'Ещё не летал за клиренс',
-                    color: '#777777'
+                    color: '#777777',
+                    count
                 };
             }
             let latest = flights[0];
@@ -2591,7 +2768,48 @@
                 ? `${diffDays} day${diffDays === 1 ? '' : 's'} ago`
                 : `${diffDays} дн. назад`;
 
-            return { text: `${dateStr} (${daysLabel})`, color };
+            return { text: `${dateStr} (${daysLabel})`, color, count };
+        }
+
+        // Считает количество вылетов за клиренс на каждого пилота компании
+        // (по recent_flights) и рисует топ-5 самых активных в боковой панели.
+        function renderTopActive() {
+            const listEl = document.getElementById('topActiveList');
+            if (!listEl) return;
+
+            const flights = window.recentFlightsData || [];
+            const countsByCid = {};
+            flights.forEach(f => {
+                if (!f.cid) return;
+                const key = f.cid.toString();
+                countsByCid[key] = (countsByCid[key] || 0) + 1;
+            });
+
+            const ranked = (window.MY_PILOTS || [])
+                .map(p => ({
+                    cid: p.cid,
+                    name: p.name,
+                    count: countsByCid[p.cid.toString()] || 0
+                }))
+                .filter(p => p.count > 0)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5);
+
+            if (ranked.length === 0) {
+                listEl.innerHTML = `<div class="top-active-empty">${currentLang === 'en' ? 'No flight data yet' : 'Пока нет данных о полетах'}</div>`;
+                return;
+            }
+
+            listEl.innerHTML = ranked.map((p, i) => `
+                <div class="top-active-item">
+                    <div class="top-active-rank">${i + 1}</div>
+                    <div class="top-active-info">
+                        <span class="top-active-name">${p.name}</span>
+                        <span class="top-active-cid">CID ${p.cid}</span>
+                    </div>
+                    <div class="top-active-count">${p.count}</div>
+                </div>
+            `).join('');
         }
 
         async function fetchVatsimData() {
@@ -2746,7 +2964,10 @@
                 let clrLastSeenHtml = '';
                 if (isAdmin) {
                     const clrInfo = getLastClearanceFlightInfo(localPilot.cid);
-                    clrLastSeenHtml = `<span class="clr-lastseen-inline" style="color: ${clrInfo.color};" title="${currentLang === 'en' ? 'Last CLR flight' : 'Последний вылет за клиренс'}">${clrInfo.text}</span>`;
+                    const clrCountLabel = currentLang === 'en'
+                        ? `${clrInfo.count} flight${clrInfo.count === 1 ? '' : 's'}`
+                        : `${clrInfo.count} ${pluralizeFlights(clrInfo.count)}`;
+                    clrLastSeenHtml = `<span class="clr-lastseen-inline" style="color: ${clrInfo.color};" title="${currentLang === 'en' ? 'Last CLR flight' : 'Последний вылет за клиренс'}">${clrInfo.text}</span> <span class="clr-count-inline" title="${currentLang === 'en' ? 'Total CLR flights' : 'Всего вылетов за клиренс'}">(${clrCountLabel})</span>`;
                 }
 
                 let deleteBtnHtml = '';
@@ -2788,7 +3009,7 @@
                     <td><span style="font-family:monospace; font-weight:600; color:#fff;">${callsign}</span></td>
                     <td>${aircraft}</td>
                     <td>${route}</td>
-                    <td>${statusBadge}${roleBadge}</td>
+                    <td><div class="status-cell">${statusBadge}${roleBadge}</div></td>
                 `;
 
                 const detailsTr = document.createElement('tr');
@@ -2845,7 +3066,9 @@
                 rosterTbody.appendChild(tr);
                 rosterTbody.appendChild(detailsTr);
             });
-            
+
+            renderTopActive();
+
             const fadeOverlay = document.getElementById('rosterFadeOverlay');
             const moreContainer = document.getElementById('rosterMoreContainer');
             const moreBtn = document.getElementById('showMorePilotsBtn');
