@@ -1124,6 +1124,15 @@
             box-shadow: 0 0 8px rgba(255, 215, 0, 0.15);
         }
 
+        /* Видно только админам: дата последнего вылета за клиренс, цвет по давности */
+        .clr-lastseen-inline {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            margin-left: 8px;
+            white-space: nowrap;
+        }
+
         /* Кнопка "Это я!" в списке пилотов */
         .btn-its-me {
             background: transparent;
@@ -2543,7 +2552,46 @@
             onSnapshot(q, (snapshot) => {
                 window.recentFlightsData = snapshot.docs.map(d => ({ ...d.data(), docId: d.id }));
                 renderRecentFlights();
+                // Обновляем ростер, чтобы у админа сразу пересчиталась дата
+                // последнего вылета за клиренс (виджет виден только админам).
+                if (window.isAdmin && window.isAdmin()) {
+                    if (window.lastVatsimData) renderRoster(window.lastVatsimData);
+                    else renderRoster({ pilots: [], controllers: [] });
+                }
             });
+        }
+
+        // Возвращает { text, color } с датой последнего вылета конкретного
+        // пилота с позывным CLR (данные берём из recent_flights, которые и так
+        // логируют только полёты за клиренс) и цветом по давности:
+        // <=15 дней — зелёный, <=30 — жёлтый, <=90 — оранжевый, 90+ — красный.
+        function getLastClearanceFlightInfo(cid) {
+            const flights = (window.recentFlightsData || []).filter(f => f.cid && f.cid.toString() === cid.toString());
+            if (flights.length === 0) {
+                return {
+                    text: currentLang === 'en' ? 'No CLR flights yet' : 'Ещё не летал за клиренс',
+                    color: '#777777'
+                };
+            }
+            let latest = flights[0];
+            flights.forEach(f => {
+                if (new Date(f.timestamp) > new Date(latest.timestamp)) latest = f;
+            });
+
+            const lastDate = new Date(latest.timestamp);
+            const diffDays = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+
+            let color = '#e74c3c'; // 90+ дней — красный
+            if (diffDays <= 15) color = '#2ecc71';       // зелёный
+            else if (diffDays <= 30) color = '#f1c40f';  // жёлтый
+            else if (diffDays <= 90) color = '#e67e22';  // оранжевый
+
+            const dateStr = lastDate.toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const daysLabel = currentLang === 'en'
+                ? `${diffDays} day${diffDays === 1 ? '' : 's'} ago`
+                : `${diffDays} дн. назад`;
+
+            return { text: `${dateStr} (${daysLabel})`, color };
         }
 
         async function fetchVatsimData() {
@@ -2695,6 +2743,12 @@
                     detailRoute = cacheData.route || '---';
                 }
 
+                let clrLastSeenHtml = '';
+                if (isAdmin) {
+                    const clrInfo = getLastClearanceFlightInfo(localPilot.cid);
+                    clrLastSeenHtml = `<span class="clr-lastseen-inline" style="color: ${clrInfo.color};" title="${currentLang === 'en' ? 'Last CLR flight' : 'Последний вылет за клиренс'}">${clrInfo.text}</span>`;
+                }
+
                 let deleteBtnHtml = '';
                 if (isAdmin) {
                     const isBasePilot = BASE_PILOTS.some(p => p.cid.toString() === localPilot.cid.toString());
@@ -2729,6 +2783,7 @@
                         <span style="font-size:11px; color:#666;">(${localPilot.cid})</span>
                         ${deleteBtnHtml}
                         ${addAdminBtnHtml}
+                        ${clrLastSeenHtml}
                     </td>
                     <td><span style="font-family:monospace; font-weight:600; color:#fff;">${callsign}</span></td>
                     <td>${aircraft}</td>
