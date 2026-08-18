@@ -1,6 +1,6 @@
         // 1. Импортируем нужные функции из официального CDN Firebase + функции для запросов (query, orderBy, limit)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, onSnapshot, deleteDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, onSnapshot, deleteDoc, query, orderBy, limit, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // 2. Конфигурация проекта из вкладки CDN
         const firebaseConfig = {
@@ -25,17 +25,31 @@
         window.rosterLimit = 3;
         window.currentAuditDocs = null;
 
-        // === СЛЕЖЕНИЕ ЗА НЕПРОЧИТАННЫМ ОТВЕТОМ ПОДДЕРЖКИ (для красного кружка на кнопке профиля) ===
+        // === СЛЕЖЕНИЕ ЗА НЕПРОЧИТАННЫМ ОТВЕТОМ ПОДДЕРЖКИ И ЛС (для красного кружка на кнопке профиля) ===
         let unsubUnreadDot = null;
+        let unsubUnreadDmDot = null;
         let unreadDotCid = null;
+        let supportUnreadFlag = false;
+        let dmUnreadFlag = false;
         function watchUnreadSupportDot(cid) {
             if (unreadDotCid === cid && unsubUnreadDot) return;
             if (unsubUnreadDot) { unsubUnreadDot(); unsubUnreadDot = null; }
+            if (unsubUnreadDmDot) { unsubUnreadDmDot(); unsubUnreadDmDot = null; }
             unreadDotCid = cid;
+            supportUnreadFlag = false;
+            dmUnreadFlag = false;
             if (!cid) { setUnreadDotVisible(false); return; }
             unsubUnreadDot = onSnapshot(doc(db, 'chat_threads', cid.toString()), snap => {
                 const data = snap.exists() ? snap.data() : null;
-                setUnreadDotVisible(!!(data && data.unreadForUser));
+                supportUnreadFlag = !!(data && data.unreadForUser);
+                setUnreadDotVisible(supportUnreadFlag || dmUnreadFlag);
+            });
+            unsubUnreadDmDot = onSnapshot(query(collection(db, 'dm_threads'), where('participants', 'array-contains', cid.toString())), snap => {
+                dmUnreadFlag = snap.docs.some(d => {
+                    const data = d.data();
+                    return !!(data && data.unread && data.unread[cid.toString()]);
+                });
+                setUnreadDotVisible(supportUnreadFlag || dmUnreadFlag);
             });
         }
         function setUnreadDotVisible(visible) {
@@ -1286,6 +1300,7 @@
                 tr.innerHTML = `
                     <td>
                         <button class="btn-its-me" onclick="event.stopPropagation(); window.quickLogin('${localPilot.cid}')">это я!</button>
+                        <button class="btn-its-me btn-dm" title="Написать в ЛС" onclick="event.stopPropagation(); window.startDM('${localPilot.cid}', '${localPilot.name.replace(/'/g, "\\'")}')">✉️ ЛС</button>
                         <strong>${localPilot.name}</strong> 
                         <span style="font-size:11px; color:#666;">(${localPilot.cid})</span>
                         ${clrLastSeenHtml}
@@ -1356,6 +1371,9 @@
                                 </div>
                                 ${discordDetailHtml}
                                 ${passwordDetailHtml}
+                                <button class="pilot-dm-link" onclick="event.stopPropagation(); window.startDM('${localPilot.cid}', '${localPilot.name.replace(/'/g, "\\'")}')">
+                                    ✉️ ${currentLang === 'en' ? 'Message' : 'Написать в ЛС'}
+                                </button>
                                 <a href="https://stats.vatsim.net/stats/${localPilot.cid}" target="_blank" class="pilot-stats-link">
                                     ${currentLang === 'en' ? 'VATSIM Stats' : 'Статистика VATSIM'}
                                 </a>
@@ -1748,6 +1766,32 @@
             window.completePilotLogin(cid, null);
         };
 
+        // Кнопка "Написать в ЛС" в ростере: если пилот ещё не вошёл в аккаунт —
+        // открываем форму входа (профиль в шапке), иначе сразу переносим его
+        // в личный кабинет с открытым диалогом с выбранным пилотом.
+        window.startDM = function(targetCid, targetName) {
+            const myCid = localStorage.getItem('vatsim_pilot_cid');
+            if (!myCid) {
+                sessionStorage.setItem('vc_pending_dm', JSON.stringify({ cid: targetCid.toString(), name: targetName || ('CID ' + targetCid) }));
+                window.updateProfileWidget();
+                setTimeout(() => {
+                    const dropdown = document.getElementById('profileDropdown');
+                    if (dropdown) dropdown.classList.add('active');
+                    const cidInput = document.getElementById('profileCidInput');
+                    if (cidInput) cidInput.focus();
+                }, 80);
+                alert(currentLang === 'en'
+                    ? 'Sign in first, then you will be taken to the chat.'
+                    : 'Сначала войдите в аккаунт — после входа откроется чат.');
+                return;
+            }
+            if (myCid.toString() === targetCid.toString()) {
+                alert(currentLang === 'en' ? "You can't message yourself." : 'Нельзя написать самому себе.');
+                return;
+            }
+            window.location.href = 'cabinet.html?dm=' + encodeURIComponent(targetCid) + '&name=' + encodeURIComponent(targetName || ('CID ' + targetCid));
+        };
+
         window.loginProfile = async function() {
             const cidInput = document.getElementById('profileCidInput');
             const passInput = document.getElementById('profilePasswordInput');
@@ -1796,6 +1840,21 @@
         window.completePilotLogin = function(cid, password) {
             localStorage.setItem('vatsim_pilot_cid', cid);
             localStorage.setItem('vc_pilot_pwd', password || '');
+
+            // Если вход был инициирован кнопкой "Написать в ЛС" в ростере —
+            // сразу переходим в личный кабинет к открытому диалогу.
+            const pendingDmRaw = sessionStorage.getItem('vc_pending_dm');
+            if (pendingDmRaw) {
+                sessionStorage.removeItem('vc_pending_dm');
+                try {
+                    const pending = JSON.parse(pendingDmRaw);
+                    if (pending && pending.cid && pending.cid.toString() !== cid.toString()) {
+                        window.location.href = 'cabinet.html?dm=' + encodeURIComponent(pending.cid) + '&name=' + encodeURIComponent(pending.name || '');
+                        return;
+                    }
+                } catch (e) { /* игнорируем некорректные данные */ }
+            }
+
             window.updateProfileWidget();
             setTimeout(() => {
                 const dropdown = document.getElementById('profileDropdown');
