@@ -1320,6 +1320,12 @@
             border: 1px solid rgba(231, 76, 60, 0.35);
         }
 
+        .role-badge-liverymaker {
+            background-color: rgba(52, 152, 219, 0.15);
+            color: #3498db;
+            border: 1px solid rgba(52, 152, 219, 0.35);
+        }
+
         .role-badge-founder {
             background: linear-gradient(135deg, rgba(255, 215, 0, 0.18), rgba(255, 165, 0, 0.12));
             color: #ffd24d;
