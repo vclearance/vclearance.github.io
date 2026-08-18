@@ -148,9 +148,10 @@ layout: none
                 <div class="brand"><img src="https://i.imgur.com/X9EWcyh.png" alt=""><span>vClearance</span></div>
                 <div class="admin-role-pill">Вы вошли как <strong id="roleLabel">—</strong></div>
 
-                <div class="side-tab active" data-tab="analytics" onclick="switchTab('analytics')">📊 Аналитика</div>
-                <div class="side-tab" data-tab="members" onclick="switchTab('members')">👥 Участники</div>
-                <div class="side-tab" data-tab="chat" onclick="switchTab('chat')">💬 Чат <span class="badge" id="chatBadge">•</span></div>
+                <div class="side-tab active" data-tab="analytics" data-role-restricted="1" onclick="switchTab('analytics')">📊 Аналитика</div>
+                <div class="side-tab" data-tab="members" data-role-restricted="1" onclick="switchTab('members')">👥 Участники</div>
+                <div class="side-tab" data-tab="chat" data-role-restricted="1" onclick="switchTab('chat')">💬 Чат <span class="badge" id="chatBadge">•</span></div>
+                <div class="side-tab" data-tab="liveries" onclick="switchTab('liveries')">🎨 Ливреи</div>
 
                 <div class="spacer"></div>
                 <a href="{{ '/' | relative_url }}" style="font-size:11.5px; color:#666; text-align:center; text-decoration:none; padding:6px 0;">← На сайт</a>
@@ -223,6 +224,45 @@ layout: none
                     </div>
                 </div>
 
+                <!-- ===== Ливреи ===== -->
+                <div class="pane" id="pane-liveries">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px;">
+                        <div class="pane-title" style="margin-bottom:0;">Ливреи</div>
+                        <button onclick="window.openAddLiveryModal()" style="background:#2ecc71; color:#fff; font-size:12px; padding:9px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:600;">+ Добавить ливрею</button>
+                    </div>
+                    <div class="card" style="padding:0;">
+                        <div id="liveriesListBody" style="max-height:600px; overflow-y:auto;">
+                            <div style="text-align:center; color:#666; padding:18px; font-size:12px;">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Модалка добавления/редактирования ливреи ===== -->
+    <div class="modal" id="addLiveryModal">
+        <div class="modal-content">
+            <button class="close-modal-btn" onclick="window.closeLiveryModal()">&times;</button>
+            <div class="modal-header" id="liveryModalHeader">Добавить ливрею</div>
+            <div class="modal-body">
+                <div class="profile-login-form">
+                    <label style="font-size:11px; text-transform:uppercase; color:#888;">Фото (ссылка на изображение):</label>
+                    <input type="text" id="liveryImg" placeholder="https://i.imgur.com/...">
+                    <label style="font-size:11px; text-transform:uppercase; color:#888; margin-top:8px;">Модель (например, PMDG 737-800, Fenix A320):</label>
+                    <input type="text" id="liveryAircraft" placeholder="Например, PMDG 737-800">
+                    <label style="font-size:11px; text-transform:uppercase; color:#888; margin-top:8px;">Название ливреи:</label>
+                    <input type="text" id="liveryTitle" placeholder="Например, Aeroflot Retro">
+                    <label style="font-size:11px; text-transform:uppercase; color:#888; margin-top:8px;">Источники скачивания:</label>
+                    <div id="liverySourcesContainer"></div>
+                    <button type="button" class="add-source-btn" onclick="window.addLiverySourceRow()" style="background:rgba(255,255,255,0.06); color:#ddd; border:1px dashed rgba(255,255,255,0.2); border-radius:8px; padding:8px; font-size:12px; cursor:pointer; margin-top:4px;">+ Добавить источник</button>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:#ccc; margin-top:14px; cursor:pointer;">
+                        <input type="checkbox" id="liveryOutdated" style="width:auto; margin:0; cursor:pointer;"> Пометить как устаревшую
+                    </label>
+                    <button onclick="window.submitLivery()" id="liverySubmitBtn" style="background:#2ecc71; color:white; margin-top:14px;">Опубликовать ливрею</button>
+                    <div id="liveryFormError" style="color:#ff4d4d; font-size:12px; margin-top:5px; display:none; text-align:center;"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -249,8 +289,16 @@ const BASE_PILOTS = [{ cid: "1816284", name: "Karim I." }];
 let MY_PILOTS = [...BASE_PILOTS];
 let flightsData = [];      // все clearance-вылеты (recent_flights)
 let adminsMap = {};        // cid -> role
-let currentRole = null;    // 'founder' | 'admin'
+let currentRole = null;    // 'founder' | 'admin' | 'liverymaker'
 let currentCid = null;
+let allLiveries = [];
+let editingLiveryId = null;
+
+function roleLabelRu(role) {
+    if (role === 'founder') return 'Основатель';
+    if (role === 'liverymaker') return 'Ливери-мейкер';
+    return 'Администратор';
+}
 
 const SESSION_KEY = 'vc_admin_session'; // localStorage — сохраняется между визитами,
                                          // поэтому вход запоминается и не запрашивается заново при каждом открытии страницы
@@ -261,7 +309,8 @@ async function tryLogin(cid, password) {
     try {
         const snap = await getDoc(doc(db, 'admins', cid));
         if (snap.exists() && snap.data().password === password) {
-            currentRole = snap.data().role === 'founder' ? 'founder' : 'admin';
+            const rawRole = snap.data().role;
+            currentRole = (rawRole === 'founder' || rawRole === 'liverymaker') ? rawRole : 'admin';
             currentCid = cid;
             return true;
         }
@@ -282,6 +331,7 @@ window.doLogin = async function() {
         enterDashboard();
         return;
     }
+    errDiv.textContent = 'Неверный VATSIM CID или пароль!';
     errDiv.style.display = 'block';
 };
 
@@ -293,8 +343,19 @@ window.doLogout = function() {
 function enterDashboard() {
     document.getElementById('loginGate').style.display = 'none';
     document.getElementById('dashApp').style.display = 'block';
-    document.getElementById('roleLabel').textContent = currentRole === 'founder' ? 'Основатель' : 'Администратор';
+    document.getElementById('roleLabel').textContent = roleLabelRu(currentRole);
+    applyRoleVisibility();
     initData();
+}
+
+// Ливери-мейкер видит только раздел "Ливреи" — остальные вкладки скрыты,
+// полные администраторы и Основатель видят всё, включая "Ливреи".
+function applyRoleVisibility() {
+    const isLiveryOnly = currentRole === 'liverymaker';
+    document.querySelectorAll('.side-tab[data-role-restricted]').forEach(el => {
+        el.style.display = isLiveryOnly ? 'none' : 'flex';
+    });
+    switchTab(isLiveryOnly ? 'liveries' : 'analytics');
 }
 
 // При открытии страницы пробуем восстановить сохранённый вход из localStorage,
@@ -305,7 +366,7 @@ function enterDashboard() {
     try {
         const { cid, password } = JSON.parse(raw);
         const ok = await tryLogin(cid, password);
-        if (ok) {
+        if (ok === true) {
             enterDashboard();
         } else {
             localStorage.removeItem(SESSION_KEY);
@@ -317,6 +378,10 @@ function enterDashboard() {
 
 /* ---------------- ДАННЫЕ ---------------- */
 function initData() {
+    listenToLiveries();
+
+    if (currentRole === 'liverymaker') return; // остальные разделы ливери-мейкеру не нужны
+
     onSnapshot(collection(db, 'custom_pilots'), snap => {
         const custom = [];
         snap.forEach(d => custom.push(d.data()));
@@ -340,6 +405,154 @@ function initData() {
 
     listenChatThreads();
 }
+
+/* ---------------- ЛИВРЕИ (доступно Основателю, Админам и Ливери-мейкерам) ---------------- */
+function listenToLiveries() {
+    onSnapshot(collection(db, 'liveries'), snap => {
+        const liveries = [];
+        snap.forEach(d => liveries.push({ id: d.id, ...d.data() }));
+        liveries.sort((a, b) => (a.aircraft || '').localeCompare(b.aircraft || ''));
+        allLiveries = liveries;
+        renderLiveriesTab();
+    }, e => console.error('Ошибка чтения ливрей:', e));
+}
+
+function safeUrl(url) {
+    const u = (url || '').trim();
+    if (/^https?:\/\//i.test(u)) return u;
+    return '#';
+}
+
+function renderLiveriesTab() {
+    const list = document.getElementById('liveriesListBody');
+    if (!list) return;
+
+    if (allLiveries.length === 0) {
+        list.innerHTML = `<div style="text-align:center; color:#666; padding:18px; font-size:12px;">Ливреи пока не добавлены.</div>`;
+        return;
+    }
+
+    list.innerHTML = allLiveries.map(liv => {
+        const outdatedTag = liv.outdated ? ' <span style="color:#ff8080; font-weight:700;">[устар.]</span>' : '';
+        return `
+            <div class="livery-admin-row">
+                <span class="livery-admin-name">${escapeHtml(liv.title)} <span>(${escapeHtml(liv.aircraft)})</span>${outdatedTag}</span>
+                <div class="livery-admin-actions">
+                    <button class="livery-admin-btn edit" title="Изменить" onclick="window.openEditLiveryModal('${liv.id}')">✏️</button>
+                    <button class="livery-admin-btn del" title="Удалить" onclick="window.deleteLivery('${liv.id}')">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.addLiverySourceRow = function(text, link) {
+    const container = document.getElementById('liverySourcesContainer');
+    const row = document.createElement('div');
+    row.className = 'livery-source-row';
+    row.innerHTML = `
+        <input type="text" class="livery-source-text" placeholder="Текст (например, Скачать с сайта)" value="${escapeHtml(text || '')}">
+        <input type="text" class="livery-source-link" placeholder="https://..." value="${escapeHtml(link || '')}">
+        <button type="button" class="remove-source-btn" onclick="this.parentElement.remove()">✕</button>
+    `;
+    container.appendChild(row);
+};
+
+function resetLiveryForm() {
+    document.getElementById('liveryImg').value = '';
+    document.getElementById('liveryAircraft').value = '';
+    document.getElementById('liveryTitle').value = '';
+    document.getElementById('liverySourcesContainer').innerHTML = '';
+    document.getElementById('liveryOutdated').checked = false;
+    const errDiv = document.getElementById('liveryFormError');
+    if (errDiv) errDiv.style.display = 'none';
+    window.addLiverySourceRow();
+}
+
+window.openAddLiveryModal = function() {
+    editingLiveryId = null;
+    resetLiveryForm();
+    document.getElementById('liveryModalHeader').textContent = 'Добавить ливрею';
+    document.getElementById('liverySubmitBtn').textContent = 'Опубликовать ливрею';
+    document.getElementById('addLiveryModal').classList.add('open');
+};
+
+window.openEditLiveryModal = function(id) {
+    const liv = allLiveries.find(l => l.id === id);
+    if (!liv) return;
+
+    editingLiveryId = id;
+    document.getElementById('liveryImg').value = liv.img || '';
+    document.getElementById('liveryAircraft').value = liv.aircraft || '';
+    document.getElementById('liveryTitle').value = liv.title || '';
+
+    const container = document.getElementById('liverySourcesContainer');
+    container.innerHTML = '';
+    const sources = Array.isArray(liv.sources) && liv.sources.length > 0 ? liv.sources : [{ text: '', link: '' }];
+    sources.forEach(src => window.addLiverySourceRow(src.text, src.link));
+
+    document.getElementById('liveryOutdated').checked = !!liv.outdated;
+    const errDiv = document.getElementById('liveryFormError');
+    if (errDiv) errDiv.style.display = 'none';
+
+    document.getElementById('liveryModalHeader').textContent = 'Изменить ливрею';
+    document.getElementById('liverySubmitBtn').textContent = 'Сохранить изменения';
+    document.getElementById('addLiveryModal').classList.add('open');
+};
+
+window.closeLiveryModal = function() {
+    document.getElementById('addLiveryModal').classList.remove('open');
+    editingLiveryId = null;
+};
+
+window.submitLivery = async function() {
+    const img = document.getElementById('liveryImg').value.trim();
+    const aircraft = document.getElementById('liveryAircraft').value.trim();
+    const title = document.getElementById('liveryTitle').value.trim();
+    const errDiv = document.getElementById('liveryFormError');
+
+    if (!img || !aircraft || !title) {
+        if (errDiv) { errDiv.textContent = 'Заполните фото, модель и название ливреи!'; errDiv.style.display = 'block'; }
+        return;
+    }
+
+    const sources = [];
+    document.querySelectorAll('#liverySourcesContainer .livery-source-row').forEach(row => {
+        const text = row.querySelector('.livery-source-text').value.trim();
+        const link = row.querySelector('.livery-source-link').value.trim();
+        if (text && link) sources.push({ text, link });
+    });
+
+    const outdated = document.getElementById('liveryOutdated').checked;
+    const liveryData = { img, aircraft, title, sources, outdated, updatedAt: new Date().toISOString() };
+
+    try {
+        if (editingLiveryId) {
+            await setDoc(doc(db, 'liveries', editingLiveryId), liveryData, { merge: true });
+        } else {
+            liveryData.addedAt = new Date().toISOString();
+            await addDoc(collection(db, 'liveries'), liveryData);
+        }
+        window.closeLiveryModal();
+    } catch (error) {
+        console.error('Ошибка сохранения ливреи:', error);
+        if (errDiv) { errDiv.textContent = 'Произошла ошибка при сохранении. Попробуйте снова.'; errDiv.style.display = 'block'; }
+    }
+};
+
+window.deleteLivery = async function(id) {
+    const liv = allLiveries.find(l => l.id === id);
+    if (!liv) return;
+
+    if (confirm(`Удалить ливрею "${liv.title}" (${liv.aircraft})?`)) {
+        try {
+            await deleteDoc(doc(db, 'liveries', id));
+        } catch (error) {
+            console.error('Ошибка удаления ливреи:', error);
+            alert('Произошла ошибка при удалении.');
+        }
+    }
+};
 
 /* ---------------- АНАЛИТИКА ---------------- */
 function renderAnalytics() {
@@ -426,9 +639,13 @@ window.toggleAdmin = async function(cid, name, makeAdmin) {
     if (currentRole !== 'founder') { alert('Только Основатель может назначать администраторов!'); return; }
     try {
         if (makeAdmin) {
-            const pwd = prompt(`Пароль для нового администратора ${name} (CID ${cid}):`);
+            const roleChoice = prompt(`Роль для ${name} (CID ${cid}):\n\nВведите "admin" — полный администратор\nили "livery" — Ливери-мейкер (обычный участник, может только добавлять/редактировать ливреи)`, 'admin');
+            if (roleChoice === null) return;
+            const role = roleChoice.trim().toLowerCase().startsWith('livery') ? 'liverymaker' : 'admin';
+            const roleName = role === 'liverymaker' ? 'Ливери-мейкера' : 'администратора';
+            const pwd = prompt(`Пароль для нового ${roleName} ${name} (CID ${cid}):`);
             if (!pwd || pwd.trim().length < 6) { if (pwd !== null) alert('Пароль должен быть не короче 6 символов.'); return; }
-            await setDoc(doc(db, 'admins', cid), { password: pwd.trim(), role: 'admin', addedBy: currentCid });
+            await setDoc(doc(db, 'admins', cid), { password: pwd.trim(), role: role, addedBy: currentCid });
         } else {
             if (!confirm(`Убрать права администратора у ${name}?`)) return;
             await deleteDoc(doc(db, 'admins', cid));
@@ -457,7 +674,7 @@ function renderMembers() {
 
         return `
             <tr>
-                <td><strong>${escapeHtml(p.name)}</strong> <span style="color:#666;font-size:10px;display:block;">${cidStr}${role ? ` · ${role === 'founder' ? 'Основатель' : 'Админ'}` : ''}</span></td>
+                <td><strong>${escapeHtml(p.name)}</strong> <span style="color:#666;font-size:10px;display:block;">${cidStr}${role ? ` · ${role === 'founder' ? 'Основатель' : (role === 'liverymaker' ? 'Ливери-мейкер' : 'Админ')}` : ''}</span></td>
                 <td style="text-align:center; color:#2ecc71; font-weight:700;">${count}</td>
                 <td style="white-space:nowrap;">
                     ${currentRole === 'founder'
