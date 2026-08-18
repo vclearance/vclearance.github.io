@@ -231,9 +231,28 @@ layout: none
         padding:11px; border-radius:9px; font-weight:700; font-size:12.5px; cursor:pointer; transition:0.15s; margin-top:6px;
     }
     .profile-modal-danger:hover { background:#e74c3c; color:#fff; }
+    .profile-modal-secondary {
+        width:100%; background:rgba(46,204,113,0.12); border:1px solid rgba(46,204,113,0.35); color:#2ecc71;
+        padding:11px; border-radius:9px; font-weight:700; font-size:12.5px; cursor:pointer; transition:0.15s; margin-top:6px;
+    }
+    .profile-modal-secondary:hover { background:#2ecc71; color:#04140a; }
     .profile-group-members { text-align:left; max-height:160px; overflow-y:auto; margin:6px 0 4px; border-top:1px solid rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.06); padding:8px 2px; }
-    .profile-group-member { font-size:12.5px; color:#ccc; padding:6px 4px; }
+    .profile-group-member { font-size:12.5px; color:#ccc; padding:6px 4px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .profile-group-member span { color:#777; font-size:11px; }
+    .profile-group-member-remove { color:#e74c3c; cursor:pointer; font-size:12px; padding:2px 7px; border-radius:5px; flex:0 0 auto; }
+    .profile-group-member-remove:hover { background:rgba(231,76,60,0.15); }
+
+    /* ---------------- АВАТАРКИ (картинка вместо буквы, если указана ссылка) ---------------- */
+    .cab-avatar img, .dm-chat-avatar img, .dm-item-avatar img, .picker-item-avatar img, .profile-modal-avatar img {
+        width:100%; height:100%; border-radius:50%; object-fit:cover; display:block;
+    }
+
+    /* ---------------- НАСТРОЙКИ ---------------- */
+    .settings-avatar-row { display:flex; align-items:center; gap:16px; margin-bottom:16px; }
+    .settings-save-btn { background:#2ecc71; color:#04140a; border:none; border-radius:9px; padding:11px 18px; font-weight:700; font-size:13px; cursor:pointer; }
+    .settings-save-btn:hover { background:#27ae60; }
+    .settings-save-msg { font-size:12px; color:#2ecc71; margin-top:8px; display:none; }
+    .settings-hint { font-size:11.5px; color:#777; margin-top:6px; }
 
     /* ---------------- МОБИЛЬНАЯ ВЕРСИЯ ---------------- */
     @media (max-width: 760px) {
@@ -281,6 +300,9 @@ layout: none
                 </button>
                 <button class="cab-navitem" data-tab="messenger" onclick="window.switchCabTab('messenger')">
                     <span class="cab-navicon">💬</span><span>Мессенджер</span><span class="nav-dot" id="messengerNavDot"></span>
+                </button>
+                <button class="cab-navitem" data-tab="settings" onclick="window.switchCabTab('settings')">
+                    <span class="cab-navicon">⚙️</span><span>Настройки</span>
                 </button>
             </nav>
 
@@ -363,6 +385,23 @@ layout: none
                     </div>
                 </div>
 
+                <!-- ================= НАСТРОЙКИ ================= -->
+                <div class="cab-tab" id="tabSettings" style="display:none;">
+                    <div class="card">
+                        <h3>Настройки профиля</h3>
+                        <div class="settings-avatar-row">
+                            <div class="cab-avatar" id="settingsAvatarPreview" style="width:64px; height:64px; font-size:22px;">?</div>
+                            <div style="flex:1; min-width:0;">
+                                <label style="font-size:12px; color:#888; display:block; margin-bottom:6px;">Ссылка на аватарку (URL изображения)</label>
+                                <input type="text" id="avatarUrlInput" class="cab-modal-input" placeholder="https://..." oninput="window.previewAvatarUrl()">
+                                <div class="settings-hint">Вставьте прямую ссылку на картинку — она появится вместо буквы в кабинете и мессенджере.</div>
+                            </div>
+                        </div>
+                        <button class="settings-save-btn" onclick="window.saveAvatarUrl()">Сохранить</button>
+                        <div class="settings-save-msg" id="avatarSaveMsg">Сохранено!</div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -389,7 +428,7 @@ layout: none
                 <input type="text" id="groupNameInput" class="cab-modal-input" placeholder="Название группы" maxlength="40" style="display:none;">
                 <input type="text" id="pickerSearchInput" class="cab-modal-input" placeholder="Поиск пилота..." oninput="window.renderPickerList()">
                 <div class="picker-list" id="pickerList"></div>
-                <button class="picker-confirm-btn" id="pickerConfirmBtn" style="display:none;" onclick="window.confirmCreateGroup()">Создать группу</button>
+                <button class="picker-confirm-btn" id="pickerConfirmBtn" style="display:none;" onclick="window.pickerConfirmAction()">Создать группу</button>
             </div>
         </div>
     </div>
@@ -397,7 +436,7 @@ layout: none
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
-    getFirestore, doc, getDoc, getDocs, setDoc, addDoc, collection, onSnapshot, query, where, orderBy, arrayRemove
+    getFirestore, doc, getDoc, getDocs, setDoc, addDoc, collection, onSnapshot, query, where, orderBy, arrayRemove, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -514,6 +553,8 @@ async function enterCabinet(cid) {
     listenAllPilots();
     listenDmThreads();
     listenGroupThreads();
+    listenAdmins();
+    listenAvatars();
     handleDeepLink();
 }
 
@@ -522,6 +563,43 @@ window.switchCabTab = function(tab) {
     document.querySelectorAll('.cab-navitem').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
     document.getElementById('tabHome').style.display = tab === 'home' ? 'block' : 'none';
     document.getElementById('tabMessenger').style.display = tab === 'messenger' ? 'block' : 'none';
+    document.getElementById('tabSettings').style.display = tab === 'settings' ? 'block' : 'none';
+    if (tab === 'settings') {
+        const input = document.getElementById('avatarUrlInput');
+        if (input) input.value = avatarsMap[currentCid] || '';
+        window.previewAvatarUrl();
+    }
+};
+
+/* ---------------- НАСТРОЙКИ: АВАТАРКА ---------------- */
+window.previewAvatarUrl = function() {
+    const input = document.getElementById('avatarUrlInput');
+    const preview = document.getElementById('settingsAvatarPreview');
+    if (!input || !preview) return;
+    const url = (input.value || '').trim();
+    const letter = currentName.trim().charAt(0).toUpperCase() || '?';
+    if (url) {
+        preview.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(letter)}" onerror="window.__avatarErr(this)">`;
+    } else {
+        preview.textContent = letter;
+    }
+};
+
+window.saveAvatarUrl = async function() {
+    const input = document.getElementById('avatarUrlInput');
+    const url = (input.value || '').trim();
+    try {
+        await setDoc(doc(db, 'pilot_avatars', currentCid), { url }, { merge: true });
+        const msg = document.getElementById('avatarSaveMsg');
+        if (msg) {
+            msg.style.display = 'block';
+            clearTimeout(window.__avatarSaveMsgTimeout);
+            window.__avatarSaveMsgTimeout = setTimeout(() => { msg.style.display = 'none'; }, 2200);
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Не удалось сохранить аватарку. Попробуйте ещё раз.');
+    }
 };
 
 // Открытие ЛК по ссылке из ростера: cabinet.html?dm=CID&name=Имя
@@ -633,6 +711,8 @@ let allPilots = [];
 let dmThreadsCache = [];
 let groupThreadsCache = [];
 let combinedList = [];
+let adminsMap = {};   // cid -> 'founder' | 'admin' (общая роль в компании, из коллекции 'admins')
+let avatarsMap = {};  // cid -> url аватарки
 
 let unsubDmThreads = null;
 let unsubGroupThreads = null;
@@ -643,8 +723,55 @@ let activeThreadId = null;    // otherCid для dm, id группы для grou
 let activeThreadName = null;
 let activeGroupData = null;
 
-let pickerMode = null;        // 'dialog' | 'group'
+let pickerMode = null;        // 'dialog' | 'group' | 'addMembers'
 let pickerSelected = new Set();
+let addMembersTargetGroupId = null;
+
+/* ---- роль пилота в компании (для прав на управление ЛЮБОЙ группой) ---- */
+function listenAdmins() {
+    onSnapshot(collection(db, 'admins'), snap => {
+        const map = {};
+        snap.forEach(d => { map[d.id] = d.data().role || 'admin'; });
+        adminsMap = map;
+    }, err => console.error('Ошибка загрузки списка администраторов:', err));
+}
+function isFounderCid(cid) {
+    return !!cid && adminsMap[cid.toString()] === 'founder';
+}
+// Управлять группой (переименовывать, добавлять/удалять участников) может тот, кто её создал,
+// а также Основатель — в любой группе.
+function canManageGroup(g) {
+    if (!g) return false;
+    return (g.createdBy && g.createdBy.toString() === currentCid.toString()) || isFounderCid(currentCid);
+}
+
+/* ---- аватарки пилотов (ссылка на картинку вместо буквы) ---- */
+function listenAvatars() {
+    onSnapshot(collection(db, 'pilot_avatars'), snap => {
+        const map = {};
+        snap.forEach(d => { const u = (d.data().url || '').trim(); if (u) map[d.id] = u; });
+        avatarsMap = map;
+        renderDmList();
+        const cabAvatarEl = document.getElementById('cabAvatar');
+        if (cabAvatarEl) cabAvatarEl.innerHTML = avatarCircleHtml(currentCid, currentName);
+        if (activeThreadKind === 'dm') {
+            const el = document.getElementById('dmChatAvatar');
+            if (el) el.innerHTML = avatarCircleHtml(activeThreadId, activeThreadName);
+        }
+    }, err => console.error('Ошибка загрузки аватарок:', err));
+}
+function avatarCircleHtml(cid, name) {
+    const key = cid ? cid.toString() : '';
+    const url = avatarsMap[key];
+    const letter = escapeHtml((name || '?').trim().charAt(0).toUpperCase() || '?');
+    if (url) return `<img src="${escapeHtml(url)}" alt="${letter}" onerror="window.__avatarErr(this)">`;
+    return letter;
+}
+window.__avatarErr = function(img) {
+    const span = document.createElement('span');
+    span.textContent = img.getAttribute('alt') || '?';
+    img.replaceWith(span);
+};
 
 /* ---- список всех пилотов компании (для выбора собеседника) ---- */
 function listenAllPilots() {
@@ -675,6 +802,26 @@ function listenGroupThreads() {
     unsubGroupThreads = onSnapshot(query(collection(db, 'group_threads'), where('members', 'array-contains', currentCid)), snap => {
         groupThreadsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         rebuildCombinedList();
+
+        // Если открыт чат/профиль активной группы — подхватываем изменения (переименование, состав) на лету
+        if (activeThreadKind === 'group' && activeThreadId) {
+            const updated = groupThreadsCache.find(g => g.id === activeThreadId);
+            if (updated) {
+                activeGroupData = updated;
+                activeThreadName = updated.name || 'Группа';
+                const nameEl = document.getElementById('dmChatName');
+                if (nameEl) nameEl.textContent = activeThreadName;
+                const modal = document.getElementById('profileModal');
+                if (modal && modal.classList.contains('open')) window.openThreadProfile();
+            } else {
+                // Нас удалили из группы (или группа исчезла) — закрываем чат/профиль
+                window.closeDmChat();
+                window.closeProfileModal();
+                activeThreadKind = null;
+                activeThreadId = null;
+                activeGroupData = null;
+            }
+        }
     }, err => console.error('Ошибка загрузки групп:', err));
 }
 
@@ -725,7 +872,7 @@ function renderDmList() {
         else if (item.kind === 'group' && item.lastFrom) previewPrefix = ((item.raw.names && item.raw.names[item.lastFrom]) || '') + ': ';
 
         const previewText = previewPrefix + (item.lastMessage || '');
-        const avatarLabel = item.kind === 'group' ? '👥' : escapeHtml(item.title.trim().charAt(0).toUpperCase() || '?');
+        const avatarLabel = item.kind === 'group' ? '👥' : avatarCircleHtml(item.otherCid, item.title);
         const openCall = item.kind === 'dm'
             ? `window.openDmThread('${item.otherCid}', '${item.title.replace(/'/g, "\\'")}')`
             : `window.openGroupThread('${item.id}')`;
@@ -789,7 +936,7 @@ window.openDmThread = function(otherCid, otherName) {
     document.getElementById('dmChatName').textContent = activeThreadName;
     const avatarEl = document.getElementById('dmChatAvatar');
     avatarEl.classList.remove('group');
-    avatarEl.textContent = activeThreadName.trim().charAt(0).toUpperCase() || '?';
+    avatarEl.innerHTML = avatarCircleHtml(otherCid, activeThreadName);
     document.getElementById('dmShell').classList.add('chat-open');
 
     listenActiveThreadMessages();
@@ -954,7 +1101,7 @@ window.openThreadProfile = async function() {
         const otherCid = activeThreadId;
         const otherName = activeThreadName;
         body.innerHTML = `
-            <div class="profile-modal-avatar">${escapeHtml(otherName.trim().charAt(0).toUpperCase() || '?')}</div>
+            <div class="profile-modal-avatar">${avatarCircleHtml(otherCid, otherName)}</div>
             <div class="profile-modal-name">${escapeHtml(otherName)}</div>
             <div class="profile-modal-cid">CID ${escapeHtml(otherCid)}</div>
             <div class="profile-modal-stats">
@@ -974,14 +1121,21 @@ window.openThreadProfile = async function() {
         }
     } else if (activeThreadKind === 'group') {
         const g = activeGroupData || {};
+        const manage = canManageGroup(g);
         const membersHtml = (g.members || []).map(cid => {
             const nm = (g.names && g.names[cid]) || ('CID ' + cid);
-            return `<div class="profile-group-member">${escapeHtml(nm)} <span>(${escapeHtml(cid)})</span></div>`;
+            const canRemove = manage && cid.toString() !== currentCid.toString();
+            const removeBtn = canRemove
+                ? `<span class="profile-group-member-remove" onclick="window.removeGroupMember('${activeThreadId}','${cid}')" title="Удалить из группы">✖</span>`
+                : '';
+            return `<div class="profile-group-member"><span>${escapeHtml(nm)} <span>(${escapeHtml(cid)})</span></span>${removeBtn}</div>`;
         }).join('');
         body.innerHTML = `
             <div class="profile-modal-avatar group">👥</div>
             <div class="profile-modal-name">${escapeHtml(g.name || 'Группа')}</div>
             <div class="profile-modal-cid">${(g.members || []).length} участник(ов)</div>
+            ${manage ? `<button class="profile-modal-secondary" onclick="window.renameGroupChat('${activeThreadId}')">✏️ Переименовать группу</button>` : ''}
+            ${manage ? `<button class="profile-modal-secondary" onclick="window.openAddMembersPicker('${activeThreadId}')">➕ Добавить участника</button>` : ''}
             <div class="profile-group-members">${membersHtml}</div>
             <button class="profile-modal-danger" onclick="window.leaveGroupChat('${activeThreadId}')">🚪 Выйти из группы</button>
         `;
@@ -1003,6 +1157,101 @@ window.deleteDmChat = async function(otherCid) {
         activeThreadKind = null;
         activeThreadId = null;
     } catch (e) { console.error(e); alert('Не удалось удалить чат. Попробуйте ещё раз.'); }
+};
+
+/* ---------------- УПРАВЛЕНИЕ ГРУППОЙ (создатель группы + Основатель — в любой группе) ---------------- */
+window.renameGroupChat = async function(groupId) {
+    const g = groupThreadsCache.find(x => x.id === groupId) || activeGroupData;
+    if (!canManageGroup(g)) return;
+    const oldName = (g && g.name) || 'Группа';
+    const newNameRaw = prompt('Новое название группы:', oldName);
+    if (newNameRaw === null) return;
+    const newName = newNameRaw.trim();
+    if (!newName) { alert('Название не может быть пустым'); return; }
+    if (newName === oldName) return;
+
+    const nowIso = new Date().toISOString();
+    try {
+        await setDoc(doc(db, 'group_threads', groupId), {
+            name: newName,
+            lastMessage: `${currentName} переименовал(а) группу в «${newName}»`,
+            lastTimestamp: nowIso,
+            lastFrom: 'system'
+        }, { merge: true });
+        await addDoc(collection(db, 'group_threads', groupId, 'messages'), {
+            type: 'system', text: `${currentName} переименовал(а) группу в «${newName}»`, timestamp: nowIso, from: null
+        });
+    } catch (e) { console.error(e); alert('Не удалось переименовать группу. Попробуйте ещё раз.'); }
+};
+
+window.removeGroupMember = async function(groupId, cid) {
+    const g = groupThreadsCache.find(x => x.id === groupId) || activeGroupData;
+    if (!canManageGroup(g)) return;
+    const nm = (g && g.names && g.names[cid]) || ('CID ' + cid);
+    if (!confirm(`Удалить ${nm} из группы?`)) return;
+
+    const nowIso = new Date().toISOString();
+    try {
+        await setDoc(doc(db, 'group_threads', groupId), {
+            members: arrayRemove(cid),
+            lastMessage: `${currentName} удалил(а) из группы: ${nm}`,
+            lastTimestamp: nowIso,
+            lastFrom: 'system'
+        }, { merge: true });
+        await addDoc(collection(db, 'group_threads', groupId, 'messages'), {
+            type: 'system', text: `${currentName} удалил(а) из группы: ${nm}`, timestamp: nowIso, from: null
+        });
+    } catch (e) { console.error(e); alert('Не удалось удалить участника. Попробуйте ещё раз.'); }
+};
+
+window.openAddMembersPicker = function(groupId) {
+    const g = groupThreadsCache.find(x => x.id === groupId) || activeGroupData;
+    if (!canManageGroup(g)) return;
+    window.closeProfileModal();
+    pickerMode = 'addMembers';
+    addMembersTargetGroupId = groupId;
+    pickerSelected = new Set();
+    document.getElementById('pickerModalTitle').textContent = 'Добавить участников';
+    document.getElementById('groupNameInput').style.display = 'none';
+    const confirmBtn = document.getElementById('pickerConfirmBtn');
+    confirmBtn.style.display = 'block';
+    confirmBtn.textContent = 'Добавить';
+    document.getElementById('pickerSearchInput').value = '';
+    window.renderPickerList();
+    document.getElementById('pickerModal').classList.add('open');
+};
+
+window.confirmAddMembers = async function() {
+    if (pickerSelected.size === 0) { alert('Выберите хотя бы одного участника'); return; }
+    const groupId = addMembersTargetGroupId;
+    const g = groupThreadsCache.find(x => x.id === groupId);
+    if (!g || !canManageGroup(g)) { window.closePickerModal(); return; }
+
+    const newCids = Array.from(pickerSelected);
+    const namesUpdate = {};
+    newCids.forEach(cid => {
+        const p = allPilots.find(x => x.cid.toString() === cid.toString());
+        namesUpdate[cid] = p ? p.name : ('CID ' + cid);
+    });
+    const addedNames = newCids.map(cid => namesUpdate[cid]).join(', ');
+    const nowIso = new Date().toISOString();
+    const unreadPatch = {};
+    newCids.forEach(cid => { unreadPatch[cid] = true; });
+
+    try {
+        await setDoc(doc(db, 'group_threads', groupId), {
+            members: arrayUnion(...newCids),
+            names: { ...(g.names || {}), ...namesUpdate },
+            unread: { ...(g.unread || {}), ...unreadPatch },
+            lastMessage: `${currentName} добавил(а) в группу: ${addedNames}`,
+            lastTimestamp: nowIso,
+            lastFrom: 'system'
+        }, { merge: true });
+        await addDoc(collection(db, 'group_threads', groupId, 'messages'), {
+            type: 'system', text: `${currentName} добавил(а) в группу: ${addedNames}`, timestamp: nowIso, from: null
+        });
+        window.closePickerModal();
+    } catch (e) { console.error(e); alert('Не удалось добавить участников. Попробуйте ещё раз.'); }
 };
 
 window.leaveGroupChat = async function(groupId) {
@@ -1053,7 +1302,9 @@ window.openNewGroupPicker = function() {
     document.getElementById('pickerModalTitle').textContent = 'Новая группа';
     document.getElementById('groupNameInput').style.display = 'block';
     document.getElementById('groupNameInput').value = '';
-    document.getElementById('pickerConfirmBtn').style.display = 'block';
+    const confirmBtn = document.getElementById('pickerConfirmBtn');
+    confirmBtn.style.display = 'block';
+    confirmBtn.textContent = 'Создать группу';
     document.getElementById('pickerSearchInput').value = '';
     window.renderPickerList();
     document.getElementById('pickerModal').classList.add('open');
@@ -1061,12 +1312,23 @@ window.openNewGroupPicker = function() {
 
 window.closePickerModal = function() {
     document.getElementById('pickerModal').classList.remove('open');
+    if (pickerMode === 'addMembers') addMembersTargetGroupId = null;
+};
+
+window.pickerConfirmAction = function() {
+    if (pickerMode === 'group') return window.confirmCreateGroup();
+    if (pickerMode === 'addMembers') return window.confirmAddMembers();
 };
 
 window.renderPickerList = function() {
     const listEl = document.getElementById('pickerList');
     const searchVal = (document.getElementById('pickerSearchInput').value || '').trim().toLowerCase();
-    const candidates = allPilots.filter(p => p.cid.toString() !== currentCid.toString());
+    let candidates = allPilots.filter(p => p.cid.toString() !== currentCid.toString());
+    if (pickerMode === 'addMembers' && addMembersTargetGroupId) {
+        const g = groupThreadsCache.find(x => x.id === addMembersTargetGroupId);
+        const existing = new Set((g && g.members || []).map(c => c.toString()));
+        candidates = candidates.filter(p => !existing.has(p.cid.toString()));
+    }
     const filtered = searchVal
         ? candidates.filter(p => (p.name || '').toLowerCase().includes(searchVal) || p.cid.toString().includes(searchVal))
         : candidates;
@@ -1076,13 +1338,14 @@ window.renderPickerList = function() {
         return;
     }
 
+    const multiSelect = pickerMode === 'group' || pickerMode === 'addMembers';
     listEl.innerHTML = filtered.map(p => {
         const selected = pickerSelected.has(p.cid.toString());
         return `
-            <div class="picker-item ${pickerMode === 'group' && selected ? 'selected' : ''}" onclick="window.pickPilot('${p.cid}', '${(p.name || '').replace(/'/g, "\\'")}')">
-                <div class="picker-item-avatar">${escapeHtml((p.name || '?').trim().charAt(0).toUpperCase() || '?')}</div>
+            <div class="picker-item ${multiSelect && selected ? 'selected' : ''}" onclick="window.pickPilot('${p.cid}', '${(p.name || '').replace(/'/g, "\\'")}')">
+                <div class="picker-item-avatar">${avatarCircleHtml(p.cid, p.name)}</div>
                 <div class="picker-item-name">${escapeHtml(p.name || ('CID ' + p.cid))} <span>(${escapeHtml(p.cid)})</span></div>
-                ${pickerMode === 'group' ? `<div class="picker-item-check">${selected ? '✓' : ''}</div>` : ''}
+                ${multiSelect ? `<div class="picker-item-check">${selected ? '✓' : ''}</div>` : ''}
             </div>
         `;
     }).join('');
@@ -1093,7 +1356,7 @@ window.pickPilot = function(cid, name) {
         window.closePickerModal();
         window.switchCabTab('messenger');
         window.openDmThread(cid, name);
-    } else if (pickerMode === 'group') {
+    } else if (pickerMode === 'group' || pickerMode === 'addMembers') {
         const key = cid.toString();
         if (pickerSelected.has(key)) pickerSelected.delete(key); else pickerSelected.add(key);
         window.renderPickerList();
