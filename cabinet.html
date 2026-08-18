@@ -91,9 +91,9 @@ layout: none
         display:flex; background:#141414; border:1px solid rgba(255,255,255,0.06); border-radius:14px;
         overflow:hidden; height:min(640px, calc(100vh - 180px)); min-height:420px;
     }
-    .dm-list-pane { width:300px; flex:0 0 300px; border-right:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; min-width:0; }
+    .dm-list-pane { width:300px; flex:0 0 300px; border-right:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; min-width:0; position:relative; }
     .dm-list-header { padding:16px 18px 12px; font-size:13px; text-transform:uppercase; letter-spacing:0.4px; color:#fff; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.06); }
-    .dm-list { flex:1; overflow-y:auto; }
+    .dm-list { flex:1; overflow-y:auto; padding-bottom:60px; }
     .dm-list-empty { padding:26px 18px; text-align:center; color:#666; font-size:12.5px; line-height:1.6; }
 
     .dm-item { display:flex; gap:11px; align-items:center; padding:12px 16px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.035); transition:0.12s; }
@@ -120,13 +120,17 @@ layout: none
 
     .dm-chat-header { display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid rgba(255,255,255,0.06); }
     .dm-back-btn { display:none; background:transparent; border:none; color:#aaa; font-size:18px; cursor:pointer; padding:0 4px 0 0; }
+    .dm-chat-title-clickable { display:flex; align-items:center; gap:12px; cursor:pointer; flex:1; min-width:0; transition:0.15s; }
+    .dm-chat-title-clickable:hover { opacity:0.8; }
     .dm-chat-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#2ecc71,#27ae60); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; color:#04140a; flex:0 0 auto; }
-    .dm-chat-name { font-size:14px; font-weight:700; color:#fff; }
+    .dm-chat-avatar.group { background:linear-gradient(135deg,#2c3e50,#34495e); font-size:16px; }
+    .dm-chat-name { font-size:14px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
     .dm-messages { flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:4px; }
     .dm-date-sep { text-align:center; margin:14px 0 10px; }
     .dm-date-sep span { display:inline-block; background:rgba(255,255,255,0.06); color:#999; font-size:10.5px; font-weight:600; letter-spacing:0.3px; padding:4px 12px; border-radius:20px; text-transform:capitalize; }
     .dm-date-sep:first-child { margin-top:0; }
+    .dm-system-msg { text-align:center; color:#888; font-size:11px; margin:6px 0 12px; padding:0 10px; }
     .dm-msg { display:flex; margin-bottom:6px; }
     .dm-msg.mine { justify-content:flex-end; }
     .dm-msg.theirs { justify-content:flex-start; }
@@ -136,6 +140,7 @@ layout: none
     }
     .dm-msg.mine .dm-msg-bubble { background:#1d5c3a; color:#eafff0; border-bottom-right-radius:3px; }
     .dm-msg.theirs .dm-msg-bubble { background:#222; color:#eee; border-bottom-left-radius:3px; }
+    .dm-msg-sender { display:block; font-size:10.5px; font-weight:700; color:#7fffa8; letter-spacing:0.2px; margin-bottom:3px; }
     .dm-msg-time { display:inline-block; font-size:9.5px; opacity:0.55; margin-left:8px; }
     .dm-chat-empty-msg { text-align:center; color:#666; font-size:12.5px; padding:30px 10px; }
 
@@ -153,6 +158,82 @@ layout: none
         font-weight:700; font-size:15px; cursor:pointer; transition:0.15s; display:flex; align-items:center; justify-content:center;
     }
     .dm-composer button:hover { background:#27ae60; }
+
+    /* Кнопка "+" (новый диалог / группа) */
+    .dm-fab-wrap { position:absolute; left:14px; bottom:14px; z-index:5; }
+    .dm-fab {
+        width:44px; height:44px; border-radius:50%; background:#2ecc71; color:#04140a; border:none;
+        font-size:24px; font-weight:700; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,0.45); transition:0.15s;
+        display:flex; align-items:center; justify-content:center; line-height:1;
+    }
+    .dm-fab:hover { background:#27ae60; transform:scale(1.05); }
+    .dm-fab-menu {
+        position:absolute; bottom:54px; left:0; background:#1c1c1c; border:1px solid rgba(255,255,255,0.08);
+        border-radius:12px; padding:6px; display:none; flex-direction:column; gap:2px; min-width:170px;
+        box-shadow:0 12px 30px rgba(0,0,0,0.55);
+    }
+    .dm-fab-menu.show { display:flex; }
+    .dm-fab-menu button {
+        background:transparent; border:none; color:#eee; font-size:13px; text-align:left; padding:10px 12px;
+        border-radius:8px; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:9px;
+    }
+    .dm-fab-menu button:hover { background:rgba(46,204,113,0.12); color:#2ecc71; }
+
+    /* ---------------- МОДАЛКИ (профиль / выбор собеседника) ---------------- */
+    .cab-modal-overlay {
+        display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:1000;
+        align-items:center; justify-content:center; padding:20px;
+    }
+    .cab-modal-overlay.open { display:flex; }
+    .cab-modal-box {
+        background:#161616; border:1px solid rgba(255,255,255,0.08); border-radius:14px; width:100%; max-width:380px;
+        max-height:82vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 70px rgba(0,0,0,0.55);
+    }
+    .cab-modal-header {
+        display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid rgba(255,255,255,0.06);
+        font-size:14px; font-weight:700; color:#fff; flex:0 0 auto;
+    }
+    .cab-modal-close { background:transparent; border:none; color:#888; font-size:20px; cursor:pointer; line-height:1; padding:2px 4px; }
+    .cab-modal-close:hover { color:#fff; }
+    .cab-modal-body { padding:14px 18px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+
+    .cab-modal-input {
+        width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:9px;
+        color:#eee; font-size:13px; padding:10px 12px; box-sizing:border-box; font-family:inherit;
+    }
+    .cab-modal-input::placeholder { color:#777; }
+    .cab-modal-input:focus { outline:none; border-color:rgba(46,204,113,0.5); }
+
+    .picker-list { display:flex; flex-direction:column; gap:2px; max-height:280px; overflow-y:auto; }
+    .picker-item { display:flex; align-items:center; gap:10px; padding:9px 8px; border-radius:8px; cursor:pointer; }
+    .picker-item:hover { background:rgba(255,255,255,0.04); }
+    .picker-item-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#2c3e50,#34495e); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#eee; flex:0 0 auto; }
+    .picker-item-name { font-size:13px; color:#eee; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .picker-item-name span { color:#666; }
+    .picker-item-check { width:18px; height:18px; border-radius:5px; border:1.5px solid rgba(255,255,255,0.25); flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-size:11px; color:#04140a; font-weight:800; }
+    .picker-item.selected .picker-item-check { background:#2ecc71; border-color:#2ecc71; }
+    .picker-empty { text-align:center; color:#666; font-size:12px; padding:16px 0; }
+    .picker-confirm-btn { background:#2ecc71; color:#04140a; border:none; border-radius:9px; padding:11px; font-weight:700; font-size:13px; cursor:pointer; }
+    .picker-confirm-btn:hover { background:#27ae60; }
+
+    .profile-modal-avatar { width:64px; height:64px; border-radius:50%; margin:6px auto 0; background:linear-gradient(135deg,#2ecc71,#27ae60); display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:800; color:#04140a; }
+    .profile-modal-avatar.group { background:linear-gradient(135deg,#2c3e50,#34495e); font-size:26px; }
+    .profile-modal-name { font-size:16px; font-weight:700; color:#fff; margin-top:10px; text-align:center; }
+    .profile-modal-cid { font-size:12px; color:#888; margin-top:2px; text-align:center; }
+    .profile-modal-stats { display:flex; justify-content:center; gap:24px; margin:16px 0 4px; }
+    .profile-modal-stat { display:flex; flex-direction:column; align-items:center; gap:4px; }
+    .profile-modal-stat span { font-size:22px; font-weight:800; color:#2ecc71; }
+    .profile-modal-stat label { font-size:10.5px; color:#888; text-transform:uppercase; letter-spacing:0.4px; }
+    .profile-modal-link { display:block; text-align:center; color:#2ecc71; font-size:12px; text-decoration:none; margin-bottom:6px; }
+    .profile-modal-link:hover { text-decoration:underline; }
+    .profile-modal-danger {
+        width:100%; background:rgba(231,76,60,0.12); border:1px solid rgba(231,76,60,0.35); color:#e74c3c;
+        padding:11px; border-radius:9px; font-weight:700; font-size:12.5px; cursor:pointer; transition:0.15s; margin-top:6px;
+    }
+    .profile-modal-danger:hover { background:#e74c3c; color:#fff; }
+    .profile-group-members { text-align:left; max-height:160px; overflow-y:auto; margin:6px 0 4px; border-top:1px solid rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.06); padding:8px 2px; }
+    .profile-group-member { font-size:12.5px; color:#ccc; padding:6px 4px; }
+    .profile-group-member span { color:#777; font-size:11px; }
 
     /* ---------------- МОБИЛЬНАЯ ВЕРСИЯ ---------------- */
     @media (max-width: 760px) {
@@ -254,14 +335,23 @@ layout: none
                             <div class="dm-list" id="dmList">
                                 <div class="dm-list-empty">Загрузка...</div>
                             </div>
+                            <div class="dm-fab-wrap">
+                                <div class="dm-fab-menu" id="dmFabMenu">
+                                    <button onclick="window.openNewDialogPicker()">💬 Диалог</button>
+                                    <button onclick="window.openNewGroupPicker()">👥 Группу</button>
+                                </div>
+                                <button class="dm-fab" onclick="window.toggleFabMenu(event)" title="Новый диалог или группа">+</button>
+                            </div>
                         </div>
                         <div class="dm-chat-pane" id="dmChatPane">
-                            <div class="dm-chat-empty" id="dmChatEmpty">Выберите диалог слева или нажмите «Написать в ЛС» напротив пилота в ростере</div>
+                            <div class="dm-chat-empty" id="dmChatEmpty">Выберите диалог слева, нажмите «+» чтобы начать новый, или откройте профиль пилота в ростере и нажмите «Написать в ЛС»</div>
                             <div class="dm-chat-active" id="dmChatActive" style="display:none;">
                                 <div class="dm-chat-header">
                                     <button class="dm-back-btn" id="dmBackBtn" onclick="window.closeDmChat()">←</button>
-                                    <div class="dm-chat-avatar" id="dmChatAvatar">?</div>
-                                    <div class="dm-chat-name" id="dmChatName">—</div>
+                                    <div class="dm-chat-title-clickable" onclick="window.openThreadProfile()" title="Открыть профиль">
+                                        <div class="dm-chat-avatar" id="dmChatAvatar">?</div>
+                                        <div class="dm-chat-name" id="dmChatName">—</div>
+                                    </div>
                                 </div>
                                 <div class="dm-messages" id="dmMessages"></div>
                                 <div class="dm-composer">
@@ -277,10 +367,37 @@ layout: none
         </div>
     </div>
 
+    <!-- ================= МОДАЛКА: профиль собеседника / группы ================= -->
+    <div class="cab-modal-overlay" id="profileModal">
+        <div class="cab-modal-box">
+            <div class="cab-modal-header">
+                <span>Профиль</span>
+                <button class="cab-modal-close" onclick="window.closeProfileModal()">×</button>
+            </div>
+            <div class="cab-modal-body" id="profileModalBody" style="align-items:center; text-align:center;"></div>
+        </div>
+    </div>
+
+    <!-- ================= МОДАЛКА: новый диалог / новая группа ================= -->
+    <div class="cab-modal-overlay" id="pickerModal">
+        <div class="cab-modal-box">
+            <div class="cab-modal-header">
+                <span id="pickerModalTitle">Новый диалог</span>
+                <button class="cab-modal-close" onclick="window.closePickerModal()">×</button>
+            </div>
+            <div class="cab-modal-body">
+                <input type="text" id="groupNameInput" class="cab-modal-input" placeholder="Название группы" maxlength="40" style="display:none;">
+                <input type="text" id="pickerSearchInput" class="cab-modal-input" placeholder="Поиск пилота..." oninput="window.renderPickerList()">
+                <div class="picker-list" id="pickerList"></div>
+                <button class="picker-confirm-btn" id="pickerConfirmBtn" style="display:none;" onclick="window.confirmCreateGroup()">Создать группу</button>
+            </div>
+        </div>
+    </div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
-    getFirestore, doc, getDoc, getDocs, setDoc, addDoc, collection, onSnapshot, query, where, orderBy
+    getFirestore, doc, getDoc, getDocs, setDoc, addDoc, collection, onSnapshot, query, where, orderBy, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -394,7 +511,9 @@ async function enterCabinet(cid) {
 
     loadFlights();
     ensureThreadAndListen();
+    listenAllPilots();
     listenDmThreads();
+    listenGroupThreads();
     handleDeepLink();
 }
 
@@ -500,17 +619,40 @@ function ensureThreadAndListen() {
 }
 
 /* =========================================================
-   МЕССЕНДЖЕР (личные сообщения между пилотами)
-   Коллекция dm_threads/{threadId} — threadId = отсортированная
-   пара CID через "_", поле participants: [cidA, cidB],
-   names: {cid: имя}, lastMessage/lastTimestamp/lastFrom,
-   unread: {cid: bool}. Сообщения — подколлекция messages.
+   МЕССЕНДЖЕР (личные сообщения + группы)
+
+   dm_threads/{cidA_cidB}: participants:[cidA,cidB], names:{cid:имя},
+     lastMessage/lastTimestamp/lastFrom, unread:{cid:bool}, hiddenFor:{cid:bool}
+     dm_threads/{id}/messages: {from, text, timestamp}
+
+   group_threads/{autoId}: name, members:[cid...], names:{cid:имя}, createdBy,
+     lastMessage/lastTimestamp/lastFrom, unread:{cid:bool}
+     group_threads/{id}/messages: {from, text, timestamp, type:'text'|'system'}
    ========================================================= */
+let allPilots = [];
 let dmThreadsCache = [];
+let groupThreadsCache = [];
+let combinedList = [];
+
 let unsubDmThreads = null;
-let unsubDmMessages = null;
-let activeDmCid = null;
-let activeDmName = null;
+let unsubGroupThreads = null;
+let unsubActiveMessages = null;
+
+let activeThreadKind = null;  // 'dm' | 'group'
+let activeThreadId = null;    // otherCid для dm, id группы для group
+let activeThreadName = null;
+let activeGroupData = null;
+
+let pickerMode = null;        // 'dialog' | 'group'
+let pickerSelected = new Set();
+
+/* ---- список всех пилотов компании (для выбора собеседника) ---- */
+function listenAllPilots() {
+    onSnapshot(collection(db, 'custom_pilots'), snap => {
+        const customPilots = snap.docs.map(d => ({ cid: d.id, name: d.data().name || ('CID ' + d.id) }));
+        allPilots = [...BASE_PILOTS, ...customPilots];
+    }, err => console.error('Ошибка загрузки списка пилотов:', err));
+}
 
 function dmThreadId(a, b) {
     const x = a.toString(), y = b.toString();
@@ -519,56 +661,97 @@ function dmThreadId(a, b) {
     return x < y ? `${x}_${y}` : `${y}_${x}`;
 }
 
+/* ---------------- ЗАГРУЗКА СПИСКОВ ДИАЛОГОВ И ГРУПП ---------------- */
 function listenDmThreads() {
     if (unsubDmThreads) { unsubDmThreads(); unsubDmThreads = null; }
     unsubDmThreads = onSnapshot(query(collection(db, 'dm_threads'), where('participants', 'array-contains', currentCid)), snap => {
         dmThreadsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        dmThreadsCache.sort((a, b) => new Date(b.lastTimestamp || 0) - new Date(a.lastTimestamp || 0));
-        renderDmList();
+        rebuildCombinedList();
     }, err => console.error('Ошибка загрузки диалогов:', err));
+}
+
+function listenGroupThreads() {
+    if (unsubGroupThreads) { unsubGroupThreads(); unsubGroupThreads = null; }
+    unsubGroupThreads = onSnapshot(query(collection(db, 'group_threads'), where('members', 'array-contains', currentCid)), snap => {
+        groupThreadsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        rebuildCombinedList();
+    }, err => console.error('Ошибка загрузки групп:', err));
+}
+
+function rebuildCombinedList() {
+    const dmItems = dmThreadsCache
+        .filter(t => !(t.hiddenFor && t.hiddenFor[currentCid]))
+        .map(t => {
+            const otherCid = (t.participants || []).find(c => c && c.toString() !== currentCid.toString());
+            if (!otherCid) return null;
+            return {
+                kind: 'dm', id: t.id, otherCid,
+                title: (t.names && t.names[otherCid]) || ('CID ' + otherCid),
+                lastMessage: t.lastMessage || '', lastTimestamp: t.lastTimestamp || null, lastFrom: t.lastFrom || null,
+                unread: !!(t.unread && t.unread[currentCid]), raw: t
+            };
+        }).filter(Boolean);
+
+    const groupItems = groupThreadsCache.map(g => ({
+        kind: 'group', id: g.id,
+        title: g.name || 'Группа',
+        lastMessage: g.lastMessage || '', lastTimestamp: g.lastTimestamp || null, lastFrom: g.lastFrom || null,
+        unread: !!(g.unread && g.unread[currentCid]), raw: g
+    }));
+
+    combinedList = [...dmItems, ...groupItems].sort((a, b) => new Date(b.lastTimestamp || 0) - new Date(a.lastTimestamp || 0));
+    renderDmList();
 }
 
 function renderDmList() {
     const listEl = document.getElementById('dmList');
     if (!listEl) return;
 
-    if (!dmThreadsCache.length) {
-        listEl.innerHTML = `<div class="dm-list-empty">Пока нет диалогов.<br>Нажмите «Написать в ЛС» напротив пилота в разделе «Состав компании».</div>`;
-    } else {
-        listEl.innerHTML = dmThreadsCache.map(t => {
-            const otherCid = (t.participants || []).find(c => c && c.toString() !== currentCid.toString());
-            if (!otherCid) return '';
-            const otherName = (t.names && t.names[otherCid]) || ('CID ' + otherCid);
-            const unread = !!(t.unread && t.unread[currentCid]);
-            const isActive = !!(activeDmCid && otherCid.toString() === activeDmCid.toString());
-            const timeStr = t.lastTimestamp ? formatListTime(new Date(t.lastTimestamp)) : '';
-            const mine = t.lastFrom === currentCid;
-            const previewText = (mine ? 'Вы: ' : '') + (t.lastMessage || '');
-            const safeName = otherName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    if (!combinedList.length) {
+        listEl.innerHTML = `<div class="dm-list-empty">Пока нет диалогов.<br>Нажмите «+» внизу, чтобы начать переписку или создать группу.</div>`;
+        updateMessengerNavDot();
+        return;
+    }
 
-            return `
-                <div class="dm-item ${unread ? 'unread' : ''} ${isActive ? 'active' : ''}" onclick="window.openDmThread('${otherCid}', '${safeName}')">
-                    <div class="dm-item-avatar">${escapeHtml(otherName.trim().charAt(0).toUpperCase() || '?')}</div>
-                    <div class="dm-item-body">
-                        <div class="dm-item-top">
-                            <span class="dm-item-name">${escapeHtml(otherName)}</span>
-                            <span class="dm-item-time">${timeStr}</span>
-                        </div>
-                        <div class="dm-item-bottom">
-                            <span class="dm-item-preview">${escapeHtml(previewText)}</span>
-                            ${unread ? '<span class="dm-item-dot"></span>' : ''}
-                        </div>
+    listEl.innerHTML = combinedList.map(item => {
+        const isActive = activeThreadKind === item.kind &&
+            activeThreadId && activeThreadId.toString() === (item.kind === 'dm' ? item.otherCid : item.id).toString();
+        const timeStr = item.lastTimestamp ? formatListTime(new Date(item.lastTimestamp)) : '';
+        const mine = item.lastFrom === currentCid;
+
+        let previewPrefix = '';
+        if (item.lastFrom === 'system') previewPrefix = '';
+        else if (mine) previewPrefix = 'Вы: ';
+        else if (item.kind === 'group' && item.lastFrom) previewPrefix = ((item.raw.names && item.raw.names[item.lastFrom]) || '') + ': ';
+
+        const previewText = previewPrefix + (item.lastMessage || '');
+        const avatarLabel = item.kind === 'group' ? '👥' : escapeHtml(item.title.trim().charAt(0).toUpperCase() || '?');
+        const openCall = item.kind === 'dm'
+            ? `window.openDmThread('${item.otherCid}', '${item.title.replace(/'/g, "\\'")}')`
+            : `window.openGroupThread('${item.id}')`;
+
+        return `
+            <div class="dm-item ${item.unread ? 'unread' : ''} ${isActive ? 'active' : ''}" onclick="${openCall}">
+                <div class="dm-item-avatar">${avatarLabel}</div>
+                <div class="dm-item-body">
+                    <div class="dm-item-top">
+                        <span class="dm-item-name">${escapeHtml(item.title)}</span>
+                        <span class="dm-item-time">${timeStr}</span>
+                    </div>
+                    <div class="dm-item-bottom">
+                        <span class="dm-item-preview">${escapeHtml(previewText)}</span>
+                        ${item.unread ? '<span class="dm-item-dot"></span>' : ''}
                     </div>
                 </div>
-            `;
-        }).join('');
-    }
+            </div>
+        `;
+    }).join('');
 
     updateMessengerNavDot();
 }
 
 function updateMessengerNavDot() {
-    const anyUnread = dmThreadsCache.some(t => t.unread && t.unread[currentCid]);
+    const anyUnread = combinedList.some(item => item.unread);
     document.getElementById('messengerNavDot')?.classList.toggle('show', anyUnread);
 }
 
@@ -590,48 +773,84 @@ function formatDayLabel(d) {
     return d.toLocaleDateString('ru-RU', opts);
 }
 
+/* ---------------- ОТКРЫТИЕ ЛИЧНОГО ДИАЛОГА ---------------- */
 window.openDmThread = function(otherCid, otherName) {
     otherCid = otherCid.toString();
     if (otherCid === currentCid.toString()) return;
 
-    activeDmCid = otherCid;
+    activeThreadKind = 'dm';
+    activeThreadId = otherCid;
+    activeGroupData = null;
     const cachedThread = dmThreadsCache.find(t => (t.participants || []).some(c => c && c.toString() === otherCid));
-    activeDmName = otherName || (cachedThread && cachedThread.names && cachedThread.names[otherCid]) || ('CID ' + otherCid);
+    activeThreadName = otherName || (cachedThread && cachedThread.names && cachedThread.names[otherCid]) || ('CID ' + otherCid);
 
     document.getElementById('dmChatEmpty').style.display = 'none';
     document.getElementById('dmChatActive').style.display = 'flex';
-    document.getElementById('dmChatName').textContent = activeDmName;
-    document.getElementById('dmChatAvatar').textContent = activeDmName.trim().charAt(0).toUpperCase() || '?';
+    document.getElementById('dmChatName').textContent = activeThreadName;
+    const avatarEl = document.getElementById('dmChatAvatar');
+    avatarEl.classList.remove('group');
+    avatarEl.textContent = activeThreadName.trim().charAt(0).toUpperCase() || '?';
     document.getElementById('dmShell').classList.add('chat-open');
 
-    listenDmMessages(otherCid);
+    listenActiveThreadMessages();
     markDmThreadRead(otherCid);
-    renderDmList();
 
-    // Убираем dm/name из адресной строки, чтобы обновление страницы не переоткрывало тот же чат принудительно
-    if (window.history && window.history.replaceState) {
-        window.history.replaceState({}, '', window.location.pathname);
+    // если чат был ранее «удалён» локально — возвращаем его в список при открытии
+    if (cachedThread && cachedThread.hiddenFor && cachedThread.hiddenFor[currentCid]) {
+        setDoc(doc(db, 'dm_threads', dmThreadId(currentCid, otherCid)), { hiddenFor: { [currentCid]: false } }, { merge: true }).catch(() => {});
     }
+
+    renderDmList();
+    if (window.history && window.history.replaceState) window.history.replaceState({}, '', window.location.pathname);
+};
+
+/* ---------------- ОТКРЫТИЕ ГРУППЫ ---------------- */
+window.openGroupThread = function(groupId) {
+    const g = groupThreadsCache.find(x => x.id === groupId);
+    if (!g) return;
+
+    activeThreadKind = 'group';
+    activeThreadId = groupId;
+    activeThreadName = g.name || 'Группа';
+    activeGroupData = g;
+
+    document.getElementById('dmChatEmpty').style.display = 'none';
+    document.getElementById('dmChatActive').style.display = 'flex';
+    document.getElementById('dmChatName').textContent = activeThreadName;
+    const avatarEl = document.getElementById('dmChatAvatar');
+    avatarEl.classList.add('group');
+    avatarEl.textContent = '👥';
+    document.getElementById('dmShell').classList.add('chat-open');
+
+    listenActiveThreadMessages();
+    markGroupThreadRead(groupId);
+    renderDmList();
+    if (window.history && window.history.replaceState) window.history.replaceState({}, '', window.location.pathname);
 };
 
 window.closeDmChat = function() {
     document.getElementById('dmShell').classList.remove('chat-open');
 };
 
-function listenDmMessages(otherCid) {
-    if (unsubDmMessages) { unsubDmMessages(); unsubDmMessages = null; }
-    const threadId = dmThreadId(currentCid, otherCid);
-    unsubDmMessages = onSnapshot(
-        query(collection(db, 'dm_threads', threadId, 'messages'), orderBy('timestamp', 'asc')),
-        snap => {
-            renderDmMessages(snap.docs.map(d => d.data()));
-            markDmThreadRead(otherCid);
-        },
-        err => console.error('Ошибка загрузки сообщений:', err)
-    );
+/* ---------------- СООБЩЕНИЯ АКТИВНОГО ЧАТА (ЛС или группа) ---------------- */
+function listenActiveThreadMessages() {
+    if (unsubActiveMessages) { unsubActiveMessages(); unsubActiveMessages = null; }
+
+    if (activeThreadKind === 'dm') {
+        const threadId = dmThreadId(currentCid, activeThreadId);
+        unsubActiveMessages = onSnapshot(query(collection(db, 'dm_threads', threadId, 'messages'), orderBy('timestamp', 'asc')), snap => {
+            renderThreadMessages(snap.docs.map(d => d.data()));
+            markDmThreadRead(activeThreadId);
+        }, err => console.error('Ошибка загрузки сообщений:', err));
+    } else if (activeThreadKind === 'group') {
+        unsubActiveMessages = onSnapshot(query(collection(db, 'group_threads', activeThreadId, 'messages'), orderBy('timestamp', 'asc')), snap => {
+            renderThreadMessages(snap.docs.map(d => d.data()));
+            markGroupThreadRead(activeThreadId);
+        }, err => console.error('Ошибка загрузки сообщений группы:', err));
+    }
 }
 
-function renderDmMessages(msgs) {
+function renderThreadMessages(msgs) {
     const box = document.getElementById('dmMessages');
     if (!box) return;
     if (!msgs.length) {
@@ -648,11 +867,23 @@ function renderDmMessages(msgs) {
             html += `<div class="dm-date-sep"><span>${formatDayLabel(d)}</span></div>`;
             lastDateKey = dateKey;
         }
+
+        if (m.type === 'system') {
+            html += `<div class="dm-system-msg">${escapeHtml(m.text || '')}</div>`;
+            return;
+        }
+
         const mine = m.from === currentCid;
         const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        let senderLabel = '';
+        if (activeThreadKind === 'group' && !mine) {
+            const senderName = (activeGroupData && activeGroupData.names && activeGroupData.names[m.from]) || ('CID ' + m.from);
+            senderLabel = `<span class="dm-msg-sender">${escapeHtml(senderName)}</span>`;
+        }
+
         html += `
             <div class="dm-msg ${mine ? 'mine' : 'theirs'}">
-                <div class="dm-msg-bubble">${escapeHtml(m.text || '')}<span class="dm-msg-time">${timeStr}</span></div>
+                <div class="dm-msg-bubble">${senderLabel}${escapeHtml(m.text || '')}<span class="dm-msg-time">${timeStr}</span></div>
             </div>
         `;
     });
@@ -668,37 +899,247 @@ function markDmThreadRead(otherCid) {
     setDoc(doc(db, 'dm_threads', threadId), { unread: { [currentCid]: false } }, { merge: true }).catch(() => {});
 }
 
+function markGroupThreadRead(groupId) {
+    const exists = groupThreadsCache.some(g => g.id === groupId);
+    if (!exists) return;
+    setDoc(doc(db, 'group_threads', groupId), { unread: { [currentCid]: false } }, { merge: true }).catch(() => {});
+}
+
 window.autoGrowDm = function(el) {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 };
 
+/* ---------------- ОТПРАВКА СООБЩЕНИЯ (ЛС или группа) ---------------- */
 window.sendDmMessage = async function() {
     const input = document.getElementById('dmInput');
-    if (!input || !activeDmCid) return;
+    if (!input || !activeThreadKind) return;
     const text = input.value.trim();
     if (!text) return;
     input.value = '';
     input.style.height = 'auto';
+    const nowIso = new Date().toISOString();
+
+    if (activeThreadKind === 'dm') {
+        const threadId = dmThreadId(currentCid, activeThreadId);
+        try {
+            await addDoc(collection(db, 'dm_threads', threadId, 'messages'), { from: currentCid, text, timestamp: nowIso });
+            await setDoc(doc(db, 'dm_threads', threadId), {
+                participants: [currentCid, activeThreadId],
+                names: { [currentCid]: currentName, [activeThreadId]: activeThreadName },
+                lastMessage: text, lastTimestamp: nowIso, lastFrom: currentCid,
+                unread: { [currentCid]: false, [activeThreadId]: true },
+                hiddenFor: { [currentCid]: false, [activeThreadId]: false }
+            }, { merge: true });
+        } catch (e) { console.error(e); alert('Не удалось отправить сообщение. Попробуйте ещё раз.'); }
+    } else if (activeThreadKind === 'group') {
+        try {
+            await addDoc(collection(db, 'group_threads', activeThreadId, 'messages'), { from: currentCid, text, timestamp: nowIso, type: 'text' });
+            const unreadUpdate = {};
+            (activeGroupData && activeGroupData.members || []).forEach(cid => { unreadUpdate[cid] = cid !== currentCid; });
+            await setDoc(doc(db, 'group_threads', activeThreadId), {
+                lastMessage: text, lastTimestamp: nowIso, lastFrom: currentCid, unread: unreadUpdate
+            }, { merge: true });
+        } catch (e) { console.error(e); alert('Не удалось отправить сообщение. Попробуйте ещё раз.'); }
+    }
+};
+
+/* ---------------- ПРОФИЛЬ СОБЕСЕДНИКА / ГРУППЫ ---------------- */
+window.openThreadProfile = async function() {
+    if (!activeThreadKind) return;
+    const modal = document.getElementById('profileModal');
+    const body = document.getElementById('profileModalBody');
+
+    if (activeThreadKind === 'dm') {
+        const otherCid = activeThreadId;
+        const otherName = activeThreadName;
+        body.innerHTML = `
+            <div class="profile-modal-avatar">${escapeHtml(otherName.trim().charAt(0).toUpperCase() || '?')}</div>
+            <div class="profile-modal-name">${escapeHtml(otherName)}</div>
+            <div class="profile-modal-cid">CID ${escapeHtml(otherCid)}</div>
+            <div class="profile-modal-stats">
+                <div class="profile-modal-stat"><span id="profileFlightsCount">…</span><label>вылетов за клиренс</label></div>
+            </div>
+            <a href="https://stats.vatsim.net/stats/${encodeURIComponent(otherCid)}" target="_blank" class="profile-modal-link">Статистика VATSIM</a>
+            <button class="profile-modal-danger" onclick="window.deleteDmChat('${otherCid}')">🗑️ Удалить чат</button>
+        `;
+        modal.classList.add('open');
+        try {
+            const snap = await getDocs(query(collection(db, 'recent_flights'), where('cid', '==', otherCid)));
+            const el = document.getElementById('profileFlightsCount');
+            if (el) el.textContent = snap.size;
+        } catch (e) {
+            const el = document.getElementById('profileFlightsCount');
+            if (el) el.textContent = '—';
+        }
+    } else if (activeThreadKind === 'group') {
+        const g = activeGroupData || {};
+        const membersHtml = (g.members || []).map(cid => {
+            const nm = (g.names && g.names[cid]) || ('CID ' + cid);
+            return `<div class="profile-group-member">${escapeHtml(nm)} <span>(${escapeHtml(cid)})</span></div>`;
+        }).join('');
+        body.innerHTML = `
+            <div class="profile-modal-avatar group">👥</div>
+            <div class="profile-modal-name">${escapeHtml(g.name || 'Группа')}</div>
+            <div class="profile-modal-cid">${(g.members || []).length} участник(ов)</div>
+            <div class="profile-group-members">${membersHtml}</div>
+            <button class="profile-modal-danger" onclick="window.leaveGroupChat('${activeThreadId}')">🚪 Выйти из группы</button>
+        `;
+        modal.classList.add('open');
+    }
+};
+
+window.closeProfileModal = function() {
+    document.getElementById('profileModal').classList.remove('open');
+};
+
+window.deleteDmChat = async function(otherCid) {
+    if (!confirm('Удалить этот чат? Переписка исчезнет из вашего списка диалогов.')) return;
+    const threadId = dmThreadId(currentCid, otherCid);
+    try {
+        await setDoc(doc(db, 'dm_threads', threadId), { hiddenFor: { [currentCid]: true } }, { merge: true });
+        window.closeProfileModal();
+        window.closeDmChat();
+        activeThreadKind = null;
+        activeThreadId = null;
+    } catch (e) { console.error(e); alert('Не удалось удалить чат. Попробуйте ещё раз.'); }
+};
+
+window.leaveGroupChat = async function(groupId) {
+    if (!confirm('Выйти из этой группы?')) return;
+    const nowIso = new Date().toISOString();
+    try {
+        await addDoc(collection(db, 'group_threads', groupId, 'messages'), {
+            type: 'system', text: `${currentName} вышел(а) из группы`, timestamp: nowIso, from: null
+        });
+        await setDoc(doc(db, 'group_threads', groupId), {
+            members: arrayRemove(currentCid),
+            lastMessage: `${currentName} вышел(а) из группы`,
+            lastTimestamp: nowIso,
+            lastFrom: 'system'
+        }, { merge: true });
+        window.closeProfileModal();
+        window.closeDmChat();
+        activeThreadKind = null;
+        activeThreadId = null;
+    } catch (e) { console.error(e); alert('Не удалось выйти из группы. Попробуйте ещё раз.'); }
+};
+
+/* ---------------- КНОПКА "+": НОВЫЙ ДИАЛОГ / НОВАЯ ГРУППА ---------------- */
+window.toggleFabMenu = function(e) {
+    e.stopPropagation();
+    document.getElementById('dmFabMenu').classList.toggle('show');
+};
+document.addEventListener('click', () => {
+    document.getElementById('dmFabMenu')?.classList.remove('show');
+});
+
+window.openNewDialogPicker = function() {
+    document.getElementById('dmFabMenu').classList.remove('show');
+    pickerMode = 'dialog';
+    pickerSelected = new Set();
+    document.getElementById('pickerModalTitle').textContent = 'Новый диалог';
+    document.getElementById('groupNameInput').style.display = 'none';
+    document.getElementById('pickerConfirmBtn').style.display = 'none';
+    document.getElementById('pickerSearchInput').value = '';
+    window.renderPickerList();
+    document.getElementById('pickerModal').classList.add('open');
+};
+
+window.openNewGroupPicker = function() {
+    document.getElementById('dmFabMenu').classList.remove('show');
+    pickerMode = 'group';
+    pickerSelected = new Set();
+    document.getElementById('pickerModalTitle').textContent = 'Новая группа';
+    document.getElementById('groupNameInput').style.display = 'block';
+    document.getElementById('groupNameInput').value = '';
+    document.getElementById('pickerConfirmBtn').style.display = 'block';
+    document.getElementById('pickerSearchInput').value = '';
+    window.renderPickerList();
+    document.getElementById('pickerModal').classList.add('open');
+};
+
+window.closePickerModal = function() {
+    document.getElementById('pickerModal').classList.remove('open');
+};
+
+window.renderPickerList = function() {
+    const listEl = document.getElementById('pickerList');
+    const searchVal = (document.getElementById('pickerSearchInput').value || '').trim().toLowerCase();
+    const candidates = allPilots.filter(p => p.cid.toString() !== currentCid.toString());
+    const filtered = searchVal
+        ? candidates.filter(p => (p.name || '').toLowerCase().includes(searchVal) || p.cid.toString().includes(searchVal))
+        : candidates;
+
+    if (!filtered.length) {
+        listEl.innerHTML = `<div class="picker-empty">Никого не нашлось</div>`;
+        return;
+    }
+
+    listEl.innerHTML = filtered.map(p => {
+        const selected = pickerSelected.has(p.cid.toString());
+        return `
+            <div class="picker-item ${pickerMode === 'group' && selected ? 'selected' : ''}" onclick="window.pickPilot('${p.cid}', '${(p.name || '').replace(/'/g, "\\'")}')">
+                <div class="picker-item-avatar">${escapeHtml((p.name || '?').trim().charAt(0).toUpperCase() || '?')}</div>
+                <div class="picker-item-name">${escapeHtml(p.name || ('CID ' + p.cid))} <span>(${escapeHtml(p.cid)})</span></div>
+                ${pickerMode === 'group' ? `<div class="picker-item-check">${selected ? '✓' : ''}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+};
+
+window.pickPilot = function(cid, name) {
+    if (pickerMode === 'dialog') {
+        window.closePickerModal();
+        window.switchCabTab('messenger');
+        window.openDmThread(cid, name);
+    } else if (pickerMode === 'group') {
+        const key = cid.toString();
+        if (pickerSelected.has(key)) pickerSelected.delete(key); else pickerSelected.add(key);
+        window.renderPickerList();
+    }
+};
+
+window.confirmCreateGroup = async function() {
+    const nameInput = document.getElementById('groupNameInput');
+    const groupName = (nameInput.value || '').trim();
+    if (!groupName) { alert('Введите название группы'); return; }
+    if (pickerSelected.size === 0) { alert('Выберите хотя бы одного участника'); return; }
+
+    const members = [currentCid, ...Array.from(pickerSelected)];
+    const names = { [currentCid]: currentName };
+    members.forEach(cid => {
+        if (cid === currentCid) return;
+        const p = allPilots.find(x => x.cid.toString() === cid.toString());
+        names[cid] = p ? p.name : ('CID ' + cid);
+    });
 
     const nowIso = new Date().toISOString();
-    const threadId = dmThreadId(currentCid, activeDmCid);
+    const unreadInit = {};
+    members.forEach(cid => { unreadInit[cid] = cid !== currentCid; });
+
+    const groupData = {
+        name: groupName, members, names, createdBy: currentCid, createdAt: nowIso,
+        lastMessage: `Группа «${groupName}» создана`, lastTimestamp: nowIso, lastFrom: 'system',
+        unread: unreadInit
+    };
 
     try {
-        await addDoc(collection(db, 'dm_threads', threadId, 'messages'), {
-            from: currentCid, text, timestamp: nowIso
+        const groupRef = await addDoc(collection(db, 'group_threads'), groupData);
+        await addDoc(collection(db, 'group_threads', groupRef.id, 'messages'), {
+            type: 'system', text: `${currentName} создал(а) группу «${groupName}»`, timestamp: nowIso, from: null
         });
-        await setDoc(doc(db, 'dm_threads', threadId), {
-            participants: [currentCid, activeDmCid],
-            names: { [currentCid]: currentName, [activeDmCid]: activeDmName },
-            lastMessage: text,
-            lastTimestamp: nowIso,
-            lastFrom: currentCid,
-            unread: { [currentCid]: false, [activeDmCid]: true }
-        }, { merge: true });
+
+        // Кладём группу в локальный кэш сразу, чтобы не ждать onSnapshot
+        groupThreadsCache = [{ id: groupRef.id, ...groupData }, ...groupThreadsCache.filter(g => g.id !== groupRef.id)];
+        rebuildCombinedList();
+
+        window.closePickerModal();
+        window.switchCabTab('messenger');
+        window.openGroupThread(groupRef.id);
     } catch (e) {
         console.error(e);
-        alert('Не удалось отправить сообщение. Попробуйте ещё раз.');
+        alert('Не удалось создать группу. Попробуйте ещё раз.');
     }
 };
 
