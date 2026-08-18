@@ -1,0 +1,81 @@
+---
+layout: default
+title: Участники
+nav: roster
+description: Живой ростер участников vClearance с онлайн-статусом из сети VATSIM и история последних полётов.
+---
+
+<section id="roster" class="content-section" style="padding-top: 160px;">
+    <div class="container">
+        <h2 class="section-title lang" data-ru="Состав компании" data-en="Our Roster">Состав компании</h2>
+        <p class="lang" style="max-width: 780px; margin: 0 auto 30px; text-align: center; color: #cccccc; font-weight: 300;"
+           data-ru="Таблица ниже обновляется автоматически каждую минуту и подтягивает статусы напрямую из открытого API сети VATSIM. Зелёный индикатор означает, что пилот сейчас в полёте или на связи с диспетчером." data-en="The table below refreshes automatically every minute, pulling statuses directly from the public VATSIM data feed. A green indicator means the pilot is currently flying or in contact with ATC.">
+            Таблица ниже обновляется автоматически каждую минуту и подтягивает статусы напрямую из открытого API сети VATSIM. Зелёный индикатор означает, что пилот сейчас в полёте или на связи с диспетчером.
+        </p>
+        <div id="rosterAdminControls" style="margin-bottom: 15px; text-align: right;"></div>
+        <div class="roster-layout">
+            <div class="roster-main">
+                <div class="roster-wrapper" id="rosterWrapper">
+                    <table class="roster-table">
+                        <thead>
+                            <tr>
+                                <th class="lang" data-ru="Пилот / CID" data-en="Pilot / CID">Пилот / CID</th>
+                                <th class="lang" data-ru="Позывной" data-en="Callsign">Позывной</th>
+                                <th class="lang" data-ru="Тип ВС" data-en="Aircraft">Тип ВС</th>
+                                <th class="lang" data-ru="Маршрут" data-en="Route">Маршрут</th>
+                                <th class="lang" data-ru="Статус" data-en="Status">Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roster-tbody">
+                            </tbody>
+                    </table>
+                    <div id="rosterFadeOverlay" class="roster-fade-overlay"></div>
+                </div>
+
+                <div id="rosterMoreContainer" style="text-align: center; margin-top: 22px; display: none;">
+                    <button id="showMorePilotsBtn" class="btn-show-more" onclick="window.showMorePilots()">
+                        Показать больше
+                    </button>
+                </div>
+            </div>
+
+            <aside class="roster-sidebar">
+                <div class="top-active-card">
+                    <div class="top-active-title lang" data-ru="Топ самых активных" data-en="Most Active">Топ самых активных</div>
+                    <div class="top-active-list" id="topActiveList"></div>
+                </div>
+            </aside>
+        </div>
+    </div>
+</section>
+
+<section id="recent" class="content-section" style="background-color: #0a0a0a; border-top: 1px solid rgba(255, 255, 255, 0.02);">
+    <div class="container">
+        <h2 class="section-title lang" data-ru="Последние полеты" data-en="Recent Flights">Последние полеты</h2>
+        <p class="lang" style="max-width: 780px; margin: 0 auto 25px; text-align: center; color: #cccccc; font-weight: 300;"
+           data-ru="История вылетов, выполненных под нашим позывным CLR, собирается автоматически фоновым ботом, который опрашивает сеть VATSIM каждые пять минут." data-en="A history of flights performed under our CLR callsign is collected automatically by a background bot polling the VATSIM network every five minutes.">
+            История вылетов, выполненных под нашим позывным CLR, собирается автоматически фоновым ботом, который опрашивает сеть VATSIM каждые пять минут.
+        </p>
+        <div class="roster-wrapper">
+            <table class="roster-table">
+                <thead>
+                    <tr>
+                        <th class="lang" data-ru="Дата" data-en="Date">Дата</th>
+                        <th class="lang" data-ru="Пилот" data-en="Pilot">Пилот</th>
+                        <th class="lang" data-ru="Позывной" data-en="Callsign">Позывной</th>
+                        <th class="lang" data-ru="Маршрут" data-en="Route">Маршрут</th>
+                        <th class="lang" data-ru="Тип ВС" data-en="Aircraft">Тип ВС</th>
+                    </tr>
+                </thead>
+                <tbody id="recent-flights-tbody">
+                    </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-controls">
+            <button id="prevPageBtn" onclick="window.changeRecentPage(-1)">◀</button>
+            <span id="pageIndicator" style="font-size: 13px; color: #ccc;">Страница 1 / 1</span>
+            <button id="nextPageBtn" onclick="window.changeRecentPage(1)">▶</button>
+        </div>
+    </div>
+</section>

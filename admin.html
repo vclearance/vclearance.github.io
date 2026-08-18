@@ -1,0 +1,657 @@
+---
+layout: none
+---
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Админ-панель | vClearance</title>
+<link rel="icon" href="https://i.imgur.com/X9EWcyh.png">
+<link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+<style>
+    body { background:#0d0d0d; min-height:100vh; }
+
+    /* ---------- Экран входа ---------- */
+    #loginGate {
+        min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+    }
+    #loginGate .gate-box {
+        width:100%; max-width:360px; background:#141414; border:1px solid rgba(255,255,255,0.06);
+        border-radius:14px; padding:32px 28px; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+    }
+    #loginGate .gate-logo { text-align:center; margin-bottom:18px; }
+    #loginGate .gate-logo img { height:52px; width:auto; display:inline-block; }
+    #loginGate h1 { text-align:center; font-size:16px; letter-spacing:0.5px; text-transform:uppercase; color:#fff; margin-bottom:4px; }
+    #loginGate p.sub { text-align:center; font-size:12px; color:#888; margin-bottom:22px; }
+
+    /* ---------- Layout дашборда ---------- */
+    #dashApp { display:none; min-height:100vh; }
+    .admin-shell { display:flex; min-height:100vh; }
+    .admin-sidebar {
+        width:230px; flex-shrink:0; background:#111; border-right:1px solid rgba(255,255,255,0.06);
+        padding:22px 14px; display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
+    }
+    .admin-sidebar .brand { display:flex; align-items:center; gap:10px; padding:0 8px 22px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:18px; }
+    .admin-sidebar .brand img { height:28px; width:auto; display:block; }
+    .admin-sidebar .brand span { font-size:13px; font-weight:700; color:#fff; letter-spacing:0.3px; }
+    .admin-role-pill { font-size:10.5px; color:#888; padding:0 8px 16px; }
+    .admin-role-pill strong { color:#2ecc71; }
+    .side-tab {
+        display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:8px; font-size:13px;
+        color:#bbb; cursor:pointer; margin-bottom:4px; transition:0.15s; user-select:none;
+    }
+    .side-tab:hover { background:rgba(255,255,255,0.04); color:#fff; }
+    .side-tab.active { background:rgba(46,204,113,0.12); color:#2ecc71; font-weight:600; }
+    .side-tab .badge {
+        margin-left:auto; background:#e74c3c; color:#fff; font-size:10px; font-weight:700;
+        border-radius:20px; padding:1px 7px; display:none;
+    }
+    .side-tab .badge.show { display:inline-block; }
+    .admin-sidebar .spacer { flex:1; }
+    .logout-link { font-size:11.5px; color:#e74c3c; text-align:center; cursor:pointer; padding:10px 0 2px; opacity:0.85; }
+    .logout-link:hover { opacity:1; text-decoration:underline; }
+
+    .admin-main { flex:1; padding:32px 34px; max-width:1200px; }
+    .pane { display:none; }
+    .pane.active { display:block; }
+    .pane-title { font-size:19px; font-weight:700; color:#fff; margin-bottom:22px; letter-spacing:0.2px; }
+
+    /* Аналитика */
+    .stat-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:14px; margin-bottom:26px; }
+    .stat-box { background:#151515; border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:18px; text-align:center; }
+    .stat-box h4 { font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#888; font-weight:500; margin-bottom:8px; }
+    .stat-box .num { font-size:30px; font-weight:800; color:#2ecc71; }
+    .grid-2 { display:grid; grid-template-columns:1.4fr 1fr; gap:20px; align-items:start; }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns:1fr; } .admin-main{ padding:24px 18px; } }
+    .card { background:#151515; border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:18px 18px 8px; margin-bottom:20px; }
+    .card h3 { font-size:13px; text-transform:uppercase; letter-spacing:0.4px; color:#fff; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .scroll-area { max-height:420px; overflow-y:auto; }
+    .top-row { display:flex; align-items:center; justify-content:space-between; padding:9px 4px; border-bottom:1px solid rgba(255,255,255,0.04); font-size:13px; }
+    .top-row .rank { width:20px; color:#666; font-weight:700; font-size:11px; }
+    .top-row .name { flex:1; margin-left:8px; }
+    .top-row .name small { color:#666; font-size:10px; }
+    .top-row .cnt { color:#2ecc71; font-weight:700; }
+
+    /* Участники */
+    .add-form { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
+    .add-form input {
+        flex:1; min-width:180px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+        color:#fff; padding:9px 12px; border-radius:8px; font-size:13px; outline:none; transition:0.15s;
+    }
+    .add-form input::placeholder { color:#777; }
+    .add-form input:focus { border-color:rgba(46,204,113,0.5); background:rgba(255,255,255,0.07); }
+    .add-form button { white-space:nowrap; }
+    .roster-table td, .roster-table th { padding:9px 8px; }
+    .mini-btn { border:none; border-radius:5px; font-size:10.5px; padding:5px 9px; cursor:pointer; font-weight:600; margin-right:4px; }
+    .mini-btn.green { background:rgba(46,204,113,0.15); color:#2ecc71; border:1px solid rgba(46,204,113,0.3); }
+    .mini-btn.red { background:rgba(231,76,60,0.15); color:#e74c3c; border:1px solid rgba(231,76,60,0.3); }
+    .mini-btn.blue { background:rgba(52,152,219,0.15); color:#3498db; border:1px solid rgba(52,152,219,0.3); }
+
+    /* Чат */
+    .chat-shell { display:flex; align-items:stretch; border:1px solid rgba(255,255,255,0.06); border-radius:12px; background:#141414; }
+    .chat-threads { width:280px; border-right:1px solid rgba(255,255,255,0.06); flex-shrink:0; }
+    .chat-threads-header { display:flex; align-items:center; justify-content:space-between; padding:11px 14px; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .chat-threads-header span { font-size:11px; text-transform:uppercase; letter-spacing:0.4px; color:#888; font-weight:600; }
+    .chat-threads-header label { font-size:11px; color:#aaa; display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; }
+    .chat-threads-header input[type="checkbox"] { width:auto; margin:0; cursor:pointer; }
+    .chat-thread-item { padding:13px 16px; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; }
+    .chat-thread-item:hover { background:rgba(255,255,255,0.03); }
+    .chat-thread-item.active { background:rgba(46,204,113,0.10); border-left:3px solid #2ecc71; }
+    .chat-thread-item.archived { opacity:0.5; }
+    .chat-thread-item .t-name { font-size:13px; font-weight:600; color:#fff; display:flex; justify-content:space-between; align-items:center; }
+    .chat-thread-item .t-preview { font-size:11.5px; color:#888; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .chat-thread-item .t-dot { width:8px; height:8px; border-radius:50%; background:#e74c3c; display:none; }
+    .chat-thread-item .t-dot.show { display:inline-block; }
+    .chat-empty { display:flex; align-items:center; justify-content:center; min-height:260px; color:#555; font-size:13px; flex-direction:column; flex:1; }
+    .chat-conv { flex:1; display:flex; flex-direction:column; min-width:0; }
+    .chat-conv-header { padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06); font-size:13px; font-weight:700; color:#fff; }
+    .chat-conv-header span { font-weight:400; color:#888; font-size:11px; }
+    .chat-msgs { flex:1; padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .msg { max-width:70%; padding:9px 13px; border-radius:12px; font-size:13px; line-height:1.45; }
+    .msg.user { align-self:flex-start; background:#222; color:#eee; border-bottom-left-radius:3px; }
+    .msg.admin { align-self:flex-end; background:#1d5c3a; color:#eafff0; border-bottom-right-radius:3px; }
+    .msg .cat { display:inline-block; font-size:9.5px; text-transform:uppercase; letter-spacing:0.4px; opacity:0.65; margin-bottom:3px; }
+    .msg .replier { display:block; font-size:9.5px; font-weight:700; color:#7fffa8; letter-spacing:0.2px; margin-bottom:3px; }
+    .msg .ts { display:block; font-size:9.5px; opacity:0.5; margin-top:4px; }
+    .chat-input-row { display:flex; gap:8px; padding:12px; border-top:1px solid rgba(255,255,255,0.06); align-items:flex-end; }
+    .chat-input-row textarea {
+        flex:1; resize:none; min-height:40px; max-height:140px; overflow-y:auto;
+        background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px;
+        color:#fff; font-size:13px; font-family:inherit; line-height:1.4; padding:10px 12px; outline:none; transition:0.15s;
+    }
+    .chat-input-row textarea::placeholder { color:#777; }
+    .chat-input-row textarea:focus { border-color:rgba(46,204,113,0.5); background:rgba(255,255,255,0.07); }
+    .chat-input-row button { width:auto; padding:0 18px; height:40px; }
+</style>
+</head>
+<body>
+
+    <div id="loginGate">
+        <div class="gate-box">
+            <div class="gate-logo"><img src="https://i.imgur.com/X9EWcyh.png" alt="vClearance"></div>
+            <h1>Панель управления</h1>
+            <p class="sub">Введите VATSIM CID и пароль администратора</p>
+            <div class="profile-login-form">
+                <input type="text" id="gateCid" placeholder="VATSIM CID" autocomplete="off">
+                <input type="password" id="gatePassword" placeholder="Пароль администратора" autocomplete="off" onkeydown="if(event.key==='Enter') doLogin();">
+                <button onclick="doLogin()">Войти</button>
+                <div id="gateError" style="display:none; color:#ff4d4d; font-size:12px; margin-top:6px; text-align:center;">Неверный VATSIM CID или пароль!</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashApp">
+        <div class="admin-shell">
+            <div class="admin-sidebar">
+                <div class="brand"><img src="https://i.imgur.com/X9EWcyh.png" alt=""><span>vClearance</span></div>
+                <div class="admin-role-pill">Вы вошли как <strong id="roleLabel">—</strong></div>
+
+                <div class="side-tab active" data-tab="analytics" onclick="switchTab('analytics')">📊 Аналитика</div>
+                <div class="side-tab" data-tab="members" onclick="switchTab('members')">👥 Участники</div>
+                <div class="side-tab" data-tab="chat" onclick="switchTab('chat')">💬 Чат <span class="badge" id="chatBadge">•</span></div>
+
+                <div class="spacer"></div>
+                <a href="{{ '/' | relative_url }}" style="font-size:11.5px; color:#666; text-align:center; text-decoration:none; padding:6px 0;">← На сайт</a>
+                <div class="logout-link" onclick="doLogout()">Выйти из панели</div>
+            </div>
+
+            <div class="admin-main">
+
+                <!-- ===== Аналитика ===== -->
+                <div class="pane active" id="pane-analytics">
+                    <div class="pane-title">Аналитика</div>
+                    <div class="stat-row">
+                        <div class="stat-box"><h4>Сегодня</h4><div class="num" id="statToday">0</div></div>
+                        <div class="stat-box"><h4>За неделю</h4><div class="num" id="statWeek">0</div></div>
+                        <div class="stat-box"><h4>За все время</h4><div class="num" id="statAll">0</div></div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3>Журнал вылетов за клиренс</h3>
+                            <div class="scroll-area">
+                                <table class="roster-table" style="font-size:12px;">
+                                    <thead><tr><th>Дата</th><th>Пилот</th><th>Маршрут</th></tr></thead>
+                                    <tbody id="flightLogBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3>Топ активных</h3>
+                            <div class="scroll-area" id="topPilotsBox"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Участники ===== -->
+                <div class="pane" id="pane-members">
+                    <div class="pane-title">Управление участниками</div>
+                    <div class="card">
+                        <h3>Добавить участника</h3>
+                        <div class="add-form">
+                            <input type="text" id="newCid" placeholder="VATSIM CID">
+                            <input type="text" id="newName" placeholder="Имя и фамилия">
+                            <button onclick="addParticipant()" style="background:#2ecc71; color:#fff; width:auto; padding:0 18px;">Добавить</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Ростер</h3>
+                        <div class="scroll-area">
+                            <table class="roster-table" style="font-size:12px;">
+                                <thead><tr><th>Пилот / CID</th><th>Клиренс-вылеты</th><th>Пароль</th><th>Действия</th></tr></thead>
+                                <tbody id="membersBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Чат ===== -->
+                <div class="pane" id="pane-chat">
+                    <div class="pane-title">Чат с участниками</div>
+                    <div class="chat-shell">
+                        <div class="chat-threads">
+                            <div class="chat-threads-header">
+                                <span>Диалоги</span>
+                                <label><input type="checkbox" id="toggleArchived" onchange="renderThreadsList()"> Архив</label>
+                            </div>
+                            <div id="chatThreadsList"></div>
+                        </div>
+                        <div class="chat-conv" id="chatConvBox">
+                            <div class="chat-empty">Выберите переписку слева</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import {
+    getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, getDocs, collection, onSnapshot,
+    query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCa2nr-heFF5LqoqN_tPYGJpf9PGhqMydo",
+    authDomain: "vclearance-15b43.firebaseapp.com",
+    projectId: "vclearance-15b43",
+    storageBucket: "vclearance-15b43.firebasestorage.app",
+    messagingSenderId: "299361728910",
+    appId: "1:299361728910:web:7e77b2f4431db23a66ccdf"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const BASE_PILOTS = [{ cid: "1816284", name: "Karim I." }];
+let MY_PILOTS = [...BASE_PILOTS];
+let flightsData = [];      // все clearance-вылеты (recent_flights)
+let adminsMap = {};        // cid -> role
+let currentRole = null;    // 'founder' | 'admin'
+let currentCid = null;
+
+const SESSION_KEY = 'vc_admin_session'; // localStorage — сохраняется между визитами,
+                                         // поэтому вход запоминается и не запрашивается заново при каждом открытии страницы
+
+/* ---------------- ВХОД ---------------- */
+async function tryLogin(cid, password) {
+    if (!cid || !password) return false;
+    try {
+        const snap = await getDoc(doc(db, 'admins', cid));
+        if (snap.exists() && snap.data().password === password) {
+            currentRole = snap.data().role === 'founder' ? 'founder' : 'admin';
+            currentCid = cid;
+            return true;
+        }
+    } catch (e) { console.error(e); }
+    return false;
+}
+
+window.doLogin = async function() {
+    const cid = document.getElementById('gateCid').value.trim();
+    const password = document.getElementById('gatePassword').value;
+    const errDiv = document.getElementById('gateError');
+    errDiv.style.display = 'none';
+    if (!cid || !password) return;
+
+    const ok = await tryLogin(cid, password);
+    if (ok) {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ cid, password }));
+        enterDashboard();
+        return;
+    }
+    errDiv.style.display = 'block';
+};
+
+window.doLogout = function() {
+    localStorage.removeItem(SESSION_KEY);
+    location.reload();
+};
+
+function enterDashboard() {
+    document.getElementById('loginGate').style.display = 'none';
+    document.getElementById('dashApp').style.display = 'block';
+    document.getElementById('roleLabel').textContent = currentRole === 'founder' ? 'Основатель' : 'Администратор';
+    initData();
+}
+
+// При открытии страницы пробуем восстановить сохранённый вход из localStorage,
+// заново проверяя CID+пароль в Firebase (на случай, если пароль был сменён/отозван).
+(async function boot() {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return;
+    try {
+        const { cid, password } = JSON.parse(raw);
+        const ok = await tryLogin(cid, password);
+        if (ok) {
+            enterDashboard();
+        } else {
+            localStorage.removeItem(SESSION_KEY);
+        }
+    } catch (e) {
+        localStorage.removeItem(SESSION_KEY);
+    }
+})();
+
+/* ---------------- ДАННЫЕ ---------------- */
+function initData() {
+    onSnapshot(collection(db, 'custom_pilots'), snap => {
+        const custom = [];
+        snap.forEach(d => custom.push(d.data()));
+        MY_PILOTS = [...BASE_PILOTS, ...custom];
+        renderMembers();
+        renderAnalytics();
+    });
+
+    onSnapshot(collection(db, 'admins'), snap => {
+        const map = {};
+        snap.forEach(d => map[d.id] = d.data().role || 'admin');
+        adminsMap = map;
+        renderMembers();
+    });
+
+    onSnapshot(query(collection(db, 'recent_flights'), orderBy('timestamp', 'desc')), snap => {
+        flightsData = snap.docs.map(d => d.data());
+        renderAnalytics();
+        renderMembers();
+    });
+
+    listenChatThreads();
+}
+
+/* ---------------- АНАЛИТИКА ---------------- */
+function renderAnalytics() {
+    const now = Date.now();
+    const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
+    const msWeek = 7 * 24 * 60 * 60 * 1000;
+
+    let cToday = 0, cWeek = 0;
+    flightsData.forEach(f => {
+        const t = new Date(f.timestamp).getTime();
+        if (t >= startOfToday) cToday++;
+        if (now - t <= msWeek) cWeek++;
+    });
+    document.getElementById('statToday').textContent = cToday;
+    document.getElementById('statWeek').textContent = cWeek;
+    document.getElementById('statAll').textContent = flightsData.length;
+
+    document.getElementById('flightLogBody').innerHTML = flightsData.slice(0, 200).map(f => `
+        <tr>
+            <td style="color:#aaa;">${new Date(f.timestamp).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</td>
+            <td><strong>${escapeHtml(f.name || '')}</strong> <span style="color:#666;">(${f.cid})</span></td>
+            <td>${escapeHtml(f.route || '---')}</td>
+        </tr>
+    `).join('') || `<tr><td colspan="3" style="text-align:center; color:#666; padding:18px;">Пока нет вылетов</td></tr>`;
+
+    const counts = {};
+    flightsData.forEach(f => { if (f.cid) counts[f.cid.toString()] = (counts[f.cid.toString()] || 0) + 1; });
+    const top = Object.entries(counts)
+        .map(([cid, count]) => {
+            const p = MY_PILOTS.find(p => p.cid.toString() === cid);
+            return { cid, name: p ? p.name : 'Неизвестный', count };
+        })
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 15);
+
+    document.getElementById('topPilotsBox').innerHTML = top.map((p, i) => `
+        <div class="top-row">
+            <div class="rank">${i + 1}</div>
+            <div class="name">${escapeHtml(p.name)} <small>(${p.cid})</small></div>
+            <div class="cnt">${p.count}</div>
+        </div>
+    `).join('') || `<div style="text-align:center; color:#666; padding:18px; font-size:12px;">Нет данных</div>`;
+}
+
+/* ---------------- УЧАСТНИКИ ---------------- */
+window.addParticipant = async function() {
+    const cid = document.getElementById('newCid').value.trim();
+    const name = document.getElementById('newName').value.trim();
+    if (!cid || !name) { alert('Заполните CID и имя!'); return; }
+    if (MY_PILOTS.some(p => p.cid.toString() === cid)) { alert('Пилот с таким CID уже в ростере!'); return; }
+    try {
+        await setDoc(doc(db, 'custom_pilots', cid), { cid, name });
+        document.getElementById('newCid').value = '';
+        document.getElementById('newName').value = '';
+    } catch (e) { console.error(e); alert('Не удалось добавить пилота.'); }
+};
+
+window.deleteParticipant = async function(cid, name) {
+    if (!confirm(`Удалить ${name} (${cid}) из ростера?`)) return;
+    try { await deleteDoc(doc(db, 'custom_pilots', cid)); }
+    catch (e) { console.error(e); alert('Ошибка удаления.'); }
+};
+
+window.generatePassword = async function(cid, name) {
+    if (currentRole !== 'founder') { alert('Только Основатель может выдавать пароли участникам!'); return; }
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    const pwd = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    try {
+        await setDoc(doc(db, 'pilot_auth', cid.toString()), { password: pwd, mustChange: true, updatedAt: new Date().toISOString() });
+        alert(`Временный пароль для ${name} (CID ${cid}):\n\n${pwd}\n\nПередайте его лично — при входе будет предложено сменить на свой.`);
+    } catch (e) { console.error(e); alert('Не удалось создать пароль.'); }
+};
+
+window.viewPassword = async function(cid) {
+    if (currentRole !== 'founder') { alert('Только Основатель может просматривать пароли участников!'); return; }
+    try {
+        const snap = await getDoc(doc(db, 'pilot_auth', cid.toString()));
+        if (!snap.exists() || !snap.data().password) { alert('Пароль ещё не выдан этому пилоту.'); return; }
+        alert(`Текущий пароль CID ${cid}: ${snap.data().password}`);
+    } catch (e) { console.error(e); }
+};
+
+window.toggleAdmin = async function(cid, name, makeAdmin) {
+    if (currentRole !== 'founder') { alert('Только Основатель может назначать администраторов!'); return; }
+    try {
+        if (makeAdmin) {
+            const pwd = prompt(`Пароль для нового администратора ${name} (CID ${cid}):`);
+            if (!pwd || pwd.trim().length < 6) { if (pwd !== null) alert('Пароль должен быть не короче 6 символов.'); return; }
+            await setDoc(doc(db, 'admins', cid), { password: pwd.trim(), role: 'admin', addedBy: currentCid });
+        } else {
+            if (!confirm(`Убрать права администратора у ${name}?`)) return;
+            await deleteDoc(doc(db, 'admins', cid));
+        }
+    } catch (e) { console.error(e); alert('Ошибка изменения прав.'); }
+};
+
+function renderMembers() {
+    const counts = {};
+    flightsData.forEach(f => { if (f.cid) counts[f.cid.toString()] = (counts[f.cid.toString()] || 0) + 1; });
+
+    const rows = [...MY_PILOTS].sort((a, b) => (counts[b.cid.toString()] || 0) - (counts[a.cid.toString()] || 0)).map(p => {
+        const cidStr = p.cid.toString();
+        const isBase = BASE_PILOTS.some(bp => bp.cid.toString() === cidStr);
+        const role = adminsMap[cidStr];
+        const count = counts[cidStr] || 0;
+        const safeName = escapeHtml(p.name).replace(/'/g, "\\'");
+
+        const delBtn = !isBase ? `<button class="mini-btn red" onclick="deleteParticipant('${cidStr}','${safeName}')">Удалить</button>` : '';
+        let adminBtn = '';
+        if (currentRole === 'founder' && role !== 'founder') {
+            adminBtn = role
+                ? `<button class="mini-btn red" onclick="toggleAdmin('${cidStr}','${safeName}',false)">− Админ</button>`
+                : `<button class="mini-btn green" onclick="toggleAdmin('${cidStr}','${safeName}',true)">+ Админ</button>`;
+        }
+
+        return `
+            <tr>
+                <td><strong>${escapeHtml(p.name)}</strong> <span style="color:#666;font-size:10px;display:block;">${cidStr}${role ? ` · ${role === 'founder' ? 'Основатель' : 'Админ'}` : ''}</span></td>
+                <td style="text-align:center; color:#2ecc71; font-weight:700;">${count}</td>
+                <td style="white-space:nowrap;">
+                    ${currentRole === 'founder'
+                        ? `<button class="mini-btn blue" onclick="viewPassword('${cidStr}')">Показать</button>
+                           <button class="mini-btn green" onclick="generatePassword('${cidStr}','${safeName}')">Выдать новый</button>`
+                        : `<span style="color:#666; font-size:11px;">Только у Основателя</span>`}
+                </td>
+                <td style="white-space:nowrap;">${delBtn}${adminBtn}</td>
+            </tr>
+        `;
+    }).join('');
+
+    document.getElementById('membersBody').innerHTML = rows || `<tr><td colspan="4" style="text-align:center; padding:18px; color:#666;">Ростер пуст</td></tr>`;
+}
+
+/* ---------------- ЧАТ ---------------- */
+let threadsCache = [];
+let activeThreadCid = null;
+let unsubMessages = null;
+
+function listenChatThreads() {
+    onSnapshot(query(collection(db, 'chat_threads'), orderBy('lastTimestamp', 'desc')), snap => {
+        threadsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderThreadsList();
+        const anyUnread = threadsCache.some(t => t.unreadForAdmin && !t.archived);
+        document.getElementById('chatBadge').classList.toggle('show', anyUnread);
+    });
+}
+
+function renderThreadsList() {
+    const box = document.getElementById('chatThreadsList');
+    const showArchived = document.getElementById('toggleArchived')?.checked;
+    const visible = threadsCache.filter(t => showArchived ? true : !t.archived);
+    if (visible.length === 0) {
+        box.innerHTML = `<div style="padding:20px; text-align:center; color:#666; font-size:12px;">${showArchived ? 'В архиве пусто' : 'Пока никто не писал'}</div>`;
+        return;
+    }
+    box.innerHTML = visible.map(t => `
+        <div class="chat-thread-item ${t.id === activeThreadCid ? 'active' : ''} ${t.archived ? 'archived' : ''}" onclick="openThread('${t.id}')" oncontextmenu="window.showThreadContextMenu(event, '${t.id}')">
+            <div class="t-name">${escapeHtml(t.name || t.id)} <span class="t-dot ${t.unreadForAdmin ? 'show' : ''}"></span></div>
+            <div class="t-preview">${t.lastFrom === 'admin' ? 'Вы: ' : ''}${escapeHtml(t.lastMessage || '')}</div>
+        </div>
+    `).join('');
+}
+
+window.openThread = function(cid) {
+    activeThreadCid = cid;
+    renderThreadsList();
+    setDoc(doc(db, 'chat_threads', cid), { unreadForAdmin: false }, { merge: true }).catch(() => {});
+
+    const thread = threadsCache.find(t => t.id === cid);
+    document.getElementById('chatConvBox').innerHTML = `
+        <div class="chat-conv-header">${escapeHtml(thread ? thread.name : cid)} <span>CID ${cid}</span></div>
+        <div class="chat-msgs" id="chatMsgsBox"></div>
+        <div class="chat-input-row">
+            <textarea id="chatReplyInput" rows="1" placeholder="Ответить..." oninput="autoGrowAdmin(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendAdminReply(); }"></textarea>
+            <button onclick="sendAdminReply()" style="background:#2ecc71; color:#fff;">➤</button>
+        </div>
+    `;
+
+    if (unsubMessages) unsubMessages();
+    unsubMessages = onSnapshot(query(collection(db, 'chat_threads', cid, 'messages'), orderBy('timestamp', 'asc')), snap => {
+        const msgsBox = document.getElementById('chatMsgsBox');
+        if (!msgsBox) return;
+        const catLabel = { help: 'Помощь', bug: 'Баг', idea: 'Идея' };
+        const canDelete = currentRole === 'founder';
+        msgsBox.innerHTML = snap.docs.map(d => {
+            const m = d.data();
+            return `
+                <div class="msg ${m.from === 'admin' ? 'admin' : 'user'}" ${canDelete ? `oncontextmenu="window.showMsgContextMenu(event,'${cid}','${d.id}')"` : ''}>
+                    ${m.from === 'admin' ? `<span class="replier">${escapeHtml(m.adminName || 'Администратор')}</span>` : ''}
+                    ${m.category ? `<span class="cat">${catLabel[m.category] || m.category}</span><br>` : ''}
+                    ${escapeHtml(m.text || '')}
+                    <span class="ts">${new Date(m.timestamp).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</span>
+                </div>
+            `;
+        }).join('');
+        msgsBox.scrollTop = msgsBox.scrollHeight;
+    });
+};
+
+window.autoGrowAdmin = function(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+};
+
+function getCurrentAdminName() {
+    const p = MY_PILOTS.find(p => p.cid.toString() === currentCid.toString());
+    return p ? p.name : `CID ${currentCid}`;
+}
+
+window.sendAdminReply = async function() {
+    const input = document.getElementById('chatReplyInput');
+    const text = input.value.trim();
+    if (!text || !activeThreadCid) return;
+    input.value = '';
+    input.style.height = 'auto';
+    const nowIso = new Date().toISOString();
+    try {
+        await addDoc(collection(db, 'chat_threads', activeThreadCid, 'messages'), {
+            from: 'admin', text, category: null, timestamp: nowIso,
+            adminCid: currentCid, adminName: getCurrentAdminName()
+        });
+        await setDoc(doc(db, 'chat_threads', activeThreadCid), {
+            lastMessage: text, lastTimestamp: nowIso, lastFrom: 'admin', unreadForUser: true,
+            lastAdminName: getCurrentAdminName()
+        }, { merge: true });
+    } catch (e) { console.error(e); }
+};
+
+/* ---------------- КОНТЕКСТНОЕ МЕНЮ ЧАТА (ПКМ) ---------------- */
+function closeChatContextMenu() {
+    const m = document.getElementById('chatCtxMenu');
+    if (m) m.remove();
+}
+
+function placeChatContextMenu(menu, e) {
+    document.body.appendChild(menu);
+    const x = Math.min(e.clientX, window.innerWidth - menu.offsetWidth - 10);
+    const y = Math.min(e.clientY, window.innerHeight - menu.offsetHeight - 10);
+    menu.style.left = Math.max(8, x) + 'px';
+    menu.style.top = Math.max(8, y) + 'px';
+    setTimeout(() => document.addEventListener('click', closeChatContextMenu, { once: true }), 0);
+}
+
+// ПКМ по отдельному сообщению — удаление доступно только Основателю (владельцу)
+window.showMsgContextMenu = function(e, threadCid, msgId) {
+    e.preventDefault();
+    if (currentRole !== 'founder') return;
+    closeChatContextMenu();
+    const menu = document.createElement('div');
+    menu.className = 'pilot-context-menu';
+    menu.id = 'chatCtxMenu';
+    menu.innerHTML = `<div class="pilot-context-item danger" onclick="window.closeChatContextMenuPublic(); window.deleteMessage('${threadCid}','${msgId}')">🗑️ Удалить сообщение</div>`;
+    placeChatContextMenu(menu, e);
+};
+
+// ПКМ по диалогу в списке слева — архивировать (любой админ) / удалить чат (только Основатель)
+window.showThreadContextMenu = function(e, threadCid) {
+    e.preventDefault();
+    e.stopPropagation();
+    closeChatContextMenu();
+    const t = threadsCache.find(x => x.id === threadCid);
+    const isArchived = !!(t && t.archived);
+    let items = `<div class="pilot-context-item" onclick="window.closeChatContextMenuPublic(); window.toggleArchiveThread('${threadCid}', ${!isArchived})">${isArchived ? '📤 Восстановить из архива' : '📥 Архивировать чат'}</div>`;
+    if (currentRole === 'founder') {
+        items += `<div class="pilot-context-item danger" onclick="window.closeChatContextMenuPublic(); window.deleteThread('${threadCid}')">🗑️ Удалить чат</div>`;
+    }
+    const menu = document.createElement('div');
+    menu.className = 'pilot-context-menu';
+    menu.id = 'chatCtxMenu';
+    menu.innerHTML = items;
+    placeChatContextMenu(menu, e);
+};
+
+window.closeChatContextMenuPublic = closeChatContextMenu;
+
+window.deleteMessage = async function(threadCid, msgId) {
+    if (currentRole !== 'founder') { alert('Только Основатель может удалять сообщения!'); return; }
+    if (!confirm('Удалить это сообщение?')) return;
+    try { await deleteDoc(doc(db, 'chat_threads', threadCid, 'messages', msgId)); }
+    catch (e) { console.error(e); alert('Ошибка удаления сообщения.'); }
+};
+
+window.toggleArchiveThread = async function(cid, archive) {
+    try { await setDoc(doc(db, 'chat_threads', cid), { archived: archive }, { merge: true }); }
+    catch (e) { console.error(e); alert('Ошибка архивации чата.'); }
+};
+
+window.deleteThread = async function(cid) {
+    if (currentRole !== 'founder') { alert('Только Основатель может удалять чаты!'); return; }
+    const t = threadsCache.find(x => x.id === cid);
+    if (!confirm(`Удалить весь чат с ${t ? t.name : cid}? Это действие необратимо.`)) return;
+    try {
+        const msgsSnap = await getDocs(collection(db, 'chat_threads', cid, 'messages'));
+        await Promise.all(msgsSnap.docs.map(d => deleteDoc(d.ref)));
+        await deleteDoc(doc(db, 'chat_threads', cid));
+        if (activeThreadCid === cid) {
+            activeThreadCid = null;
+            document.getElementById('chatConvBox').innerHTML = `<div class="chat-empty">Выберите переписку слева</div>`;
+        }
+    } catch (e) { console.error(e); alert('Ошибка удаления чата.'); }
+};
+
+/* ---------------- ВКЛАДКИ ---------------- */
+window.switchTab = function(tab) {
+    document.querySelectorAll('.side-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+    document.querySelectorAll('.pane').forEach(el => el.classList.remove('active'));
+    document.getElementById('pane-' + tab).classList.add('active');
+};
+
+function escapeHtml(str) {
+    return (str || '').toString().replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+</script>
+</body>
+</html>
