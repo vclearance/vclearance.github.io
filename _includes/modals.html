@@ -122,6 +122,11 @@
                     <div id="addAdminTargetName" style="font-size: 13px; color: #ccc; text-align: center; margin-bottom: 2px;"></div>
                     <label style="font-size: 11px; text-transform: uppercase; color: #888;">VATSIM CID:</label>
                     <input type="text" id="newAdminCid" readonly style="opacity: 0.65; cursor: not-allowed;">
+                    <label style="font-size: 11px; text-transform: uppercase; color: #888; margin-top: 8px;">Роль:</label>
+                    <select id="newAdminRole" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 13px; outline: none;">
+                        <option value="admin">Администратор (полный доступ)</option>
+                        <option value="liverymaker">Ливери-мейкер (только раздел «Ливреи»)</option>
+                    </select>
                     <label style="font-size: 11px; text-transform: uppercase; color: #888; margin-top: 8px;">Придумайте пароль для этого админа:</label>
                     <input type="text" id="newAdminPassword" placeholder="Новый пароль" autocomplete="off">
                     <button onclick="window.createNewAdmin()" style="background: #2ecc71; color: white;">Создать доступ</button>
