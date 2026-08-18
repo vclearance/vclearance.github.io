@@ -710,10 +710,15 @@
             const grid = document.getElementById('liveriesGrid');
             if (!grid) return;
 
+            const adminBar = document.getElementById('fleetLiveryAdminBar');
+            if (adminBar) adminBar.style.display = (window.canManageLiveries && window.canManageLiveries()) ? 'flex' : 'none';
+
             if (window.allLiveries.length === 0) {
                 grid.innerHTML = `<div class="livery-empty">${currentLang === 'en' ? 'No liveries added yet.' : 'Ливреи пока не добавлены'}</div>`;
                 return;
             }
+
+            const canManage = window.canManageLiveries && window.canManageLiveries();
 
             let html = '';
             window.allLiveries.forEach(liv => {
@@ -729,6 +734,13 @@
                     ? `<div class="livery-outdated-badge">${currentLang === 'en' ? 'Outdated' : 'Устаревшая'}</div>`
                     : '';
 
+                const manageButtons = canManage
+                    ? `<div class="livery-admin-actions" style="margin-top:8px;">
+                            <button class="livery-admin-btn edit" title="Изменить" onclick="window.openEditLiveryModal('${liv.id}')">✏️</button>
+                            <button class="livery-admin-btn del" title="Удалить" onclick="window.deleteLivery('${liv.id}')">🗑️</button>
+                       </div>`
+                    : '';
+
                 html += `
                     <div class="card livery-card${outdatedClass}">
                         ${outdatedBadge}
@@ -737,6 +749,7 @@
                             <div class="livery-aircraft">${escapeHtml(liv.aircraft)}</div>
                             <div class="livery-title">${escapeHtml(liv.title)}</div>
                             <div class="livery-sources">${sourcesHtml}</div>
+                            ${manageButtons}
                         </div>
                     </div>
                 `;
@@ -748,7 +761,7 @@
             const list = document.getElementById('liveriesAdminList');
             if (!list) return;
 
-            if (!window.isAdmin()) {
+            if (!window.canManageLiveries()) {
                 list.innerHTML = `<div style="text-align:center; color:#666; padding: 15px; font-size: 12px;">Доступно только администраторам.</div>`;
                 return;
             }
@@ -798,7 +811,7 @@
         }
 
         window.openAddLiveryModal = function() {
-            if (!window.isAdmin()) {
+            if (!window.canManageLiveries()) {
                 alert('Только администратор может добавлять ливреи!');
                 return;
             }
@@ -810,7 +823,7 @@
         };
 
         window.openEditLiveryModal = function(id) {
-            if (!window.isAdmin()) {
+            if (!window.canManageLiveries()) {
                 alert('Только администратор может редактировать ливреи!');
                 return;
             }
@@ -843,7 +856,7 @@
         };
 
         window.submitLivery = async function() {
-            if (!window.isAdmin()) {
+            if (!window.canManageLiveries()) {
                 alert('Только администратор может публиковать ливреи!');
                 return;
             }
@@ -892,7 +905,7 @@
         };
 
         window.deleteLivery = async function(id) {
-            if (!window.isAdmin()) {
+            if (!window.canManageLiveries()) {
                 alert('Только администратор может удалять ливреи!');
                 return;
             }
@@ -1264,6 +1277,8 @@
                     roleBadge = `<span class="role-badge role-badge-founder">${currentLang === 'en' ? 'Founder' : 'Основатель'}</span>`;
                 } else if (pilotRole === 'admin') {
                     roleBadge = `<span class="role-badge role-badge-admin">${currentLang === 'en' ? 'Admin' : 'Админ'}</span>`;
+                } else if (pilotRole === 'liverymaker') {
+                    roleBadge = `<span class="role-badge role-badge-liverymaker">${currentLang === 'en' ? 'Livery Maker' : 'Ливери-мейкер'}</span>`;
                 }
 
                 let detailsLabel = currentLang === 'en' ? 'Callsign' : 'Позывной';
@@ -1438,6 +1453,16 @@
 
         window.isAdmin = function() { return window.currentAdminRole === 'founder' || window.currentAdminRole === 'admin'; };
         window.isFounder = function() { return window.currentAdminRole === 'founder'; };
+        window.isLiveryMaker = function() { return window.currentAdminRole === 'liverymaker'; };
+        // Полный админ и Основатель могут всё; Ливери-мейкер — обычный участник,
+        // которому разрешено только управление разделом "Ливреи".
+        window.canManageLiveries = function() { return window.isAdmin() || window.isLiveryMaker(); };
+        function roleLabelRu(role) {
+            if (role === 'founder') return 'Основатель';
+            if (role === 'admin') return 'Администратор';
+            if (role === 'liverymaker') return 'Ливери-мейкер';
+            return 'Администратор';
+        }
 
         async function tryAdminLogin(cid, password) {
             if (!cid || !password) {
@@ -1449,7 +1474,8 @@
                 const ref = doc(db, 'admins', cid.toString());
                 const snap = await getDoc(ref);
                 if (snap.exists() && snap.data().password === password) {
-                    window.currentAdminRole = snap.data().role === 'founder' ? 'founder' : 'admin';
+                    const rawRole = snap.data().role;
+                    window.currentAdminRole = (rawRole === 'founder' || rawRole === 'liverymaker') ? rawRole : 'admin';
                     window.currentAdminCid = cid.toString();
                     return true;
                 }
@@ -1482,8 +1508,9 @@
                 renderRecentFlights(); 
                 window.renderEventsCarousel(); 
                 window.renderLiveriesAdminList();
+                window.renderLiveriesPublic();
                 window.renderAuditLogs();
-                const roleLabel = window.currentAdminRole === 'founder' ? 'Основатель' : 'Администратор';
+                const roleLabel = roleLabelRu(window.currentAdminRole);
                 alert(`Доступ подтвержден! Ваша роль: ${roleLabel}.`);
             } else {
                 if (errDiv) {
@@ -1502,6 +1529,7 @@
             renderRecentFlights();
             window.renderEventsCarousel(); 
             window.renderLiveriesAdminList();
+            window.renderLiveriesPublic();
             window.renderAuditLogs();
             document.getElementById('adminPanelModal').classList.remove('open');
         };
@@ -1523,7 +1551,7 @@
         window.openAdminPanel = function() {
             const infoDiv = document.getElementById('adminPanelRoleInfo');
             if (infoDiv) {
-                const roleLabel = window.currentAdminRole === 'founder' ? 'Основатель' : 'Администратор';
+                const roleLabel = roleLabelRu(window.currentAdminRole);
                 infoDiv.innerHTML = `Вы вошли как <strong>${roleLabel}</strong> (CID ${window.currentAdminCid}) &nbsp;·&nbsp; <span style="color:#e74c3c; cursor:pointer; text-decoration:underline;" onclick="window.logoutAdmin()">Выйти из админки</span>`;
             }
             document.getElementById('adminPanelModal').classList.add('open');
@@ -1536,10 +1564,12 @@
             }
             const cidInput = document.getElementById('newAdminCid');
             const passInput = document.getElementById('newAdminPassword');
+            const roleSelect = document.getElementById('newAdminRole');
             const nameDiv = document.getElementById('addAdminTargetName');
             const errDiv = document.getElementById('addAdminError');
             if (cidInput) cidInput.value = cid;
             if (passInput) passInput.value = '';
+            if (roleSelect) roleSelect.value = 'admin';
             if (nameDiv) nameDiv.textContent = name || '';
             if (errDiv) errDiv.style.display = 'none';
             document.getElementById('addAdminModal').classList.add('open');
@@ -1657,9 +1687,11 @@
             }
             const cidInput = document.getElementById('newAdminCid');
             const passInput = document.getElementById('newAdminPassword');
+            const roleSelect = document.getElementById('newAdminRole');
             const errDiv = document.getElementById('addAdminError');
             const cid = cidInput.value.trim();
             const password = passInput.value.trim();
+            const role = (roleSelect && roleSelect.value === 'liverymaker') ? 'liverymaker' : 'admin';
 
             if (!cid || !password) {
                 if (errDiv) { errDiv.textContent = 'Заполните VATSIM CID и пароль!'; errDiv.style.display = 'block'; }
@@ -1673,17 +1705,17 @@
             try {
                 await setDoc(doc(db, 'admins', cid), {
                     password: password,
-                    role: 'admin',
+                    role: role,
                     addedBy: window.currentAdminCid
                 });
                 
-                await window.logAudit('Назначение администратора', `Новый админ CID: ${cid}`);
+                await window.logAudit('Назначение администратора', `Новый ${roleLabelRu(role)} CID: ${cid}`);
                 
                 cidInput.value = '';
                 passInput.value = '';
                 if (errDiv) errDiv.style.display = 'none';
                 document.getElementById('addAdminModal').classList.remove('open');
-                alert(`Администратор с CID ${cid} добавлен и сохранен в Firebase!`);
+                alert(`${roleLabelRu(role)} с CID ${cid} добавлен и сохранен в Firebase!`);
             } catch (error) {
                 console.error('Ошибка создания администратора:', error);
                 if (errDiv) { errDiv.textContent = 'Ошибка сохранения в Firebase.'; errDiv.style.display = 'block'; }
