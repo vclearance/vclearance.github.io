@@ -23,9 +23,28 @@ layout: none
     #loginGate h1 { text-align:center; font-size:16px; text-transform:uppercase; letter-spacing:0.5px; color:#fff; margin-bottom:4px; }
     #loginGate p.sub { text-align:center; font-size:12px; color:#888; margin-bottom:22px; }
 
-    #cabApp { display:none; max-width:1000px; margin:0 auto; padding:30px 24px 60px; }
+    #cabApp { display:none; }
+    .cab-shell { max-width:1120px; margin:0 auto; padding:30px 24px 60px; display:flex; align-items:flex-start; gap:22px; }
+
+    /* ---------------- БОКОВОЕ МЕНЮ ---------------- */
+    .cab-sidenav { width:220px; flex:0 0 220px; background:#141414; border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:6px; position:sticky; top:24px; }
+    .cab-navitem {
+        display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:transparent; border:1px solid transparent;
+        color:#999; font-size:13.5px; font-weight:600; padding:12px 14px; border-radius:10px; cursor:pointer; transition:0.15s; font-family:inherit;
+    }
+    .cab-navitem:hover { background:rgba(255,255,255,0.04); color:#fff; }
+    .cab-navitem.active { background:rgba(46,204,113,0.12); border-color:rgba(46,204,113,0.3); color:#2ecc71; }
+    .cab-navicon { font-size:16px; line-height:1; }
+    .nav-dot { width:9px; height:9px; border-radius:50%; background:#e74c3c; margin-left:auto; display:none; box-shadow:0 0 0 2px rgba(231,76,60,0.25); flex:0 0 auto; }
+    .nav-dot.show { display:block; }
+
+    .cab-content { flex:1; min-width:0; }
+    .cab-tab { animation: cabFadeIn 0.15s ease; }
+    @keyframes cabFadeIn { from { opacity:0; } to { opacity:1; } }
+
+    /* ---------------- ГЛАВНАЯ ---------------- */
     .cab-header { display:flex; align-items:center; gap:16px; margin-bottom:26px; }
-    .cab-avatar { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#2ecc71,#27ae60); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; color:#04140a; }
+    .cab-avatar { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#2ecc71,#27ae60); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; color:#04140a; flex:0 0 auto; }
     .cab-header h2 { font-size:19px; color:#fff; }
     .cab-header .cid-tag { font-size:12px; color:#888; }
     .logout-link { margin-left:auto; font-size:11.5px; color:#e74c3c; cursor:pointer; }
@@ -39,7 +58,7 @@ layout: none
     .card { background:#151515; border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:18px 18px 8px; margin-bottom:22px; }
     .card h3 { font-size:13px; text-transform:uppercase; letter-spacing:0.4px; color:#fff; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); }
 
-    /* Бот / чат */
+    /* Бот / чат поддержки */
     .bot-actions { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
     .bot-actions button {
         flex:1; min-width:140px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
@@ -66,6 +85,91 @@ layout: none
     .chat-composer button { align-self:flex-end; width:auto; padding:0 20px; height:40px; background:#2ecc71; color:#fff; border:none; border-radius:10px; font-weight:600; cursor:pointer; transition:0.15s; }
     .chat-composer button:hover { background:#27ae60; }
     .chat-composer .hint { font-size:10.5px; color:#666; margin:2px 2px 0; }
+
+    /* ---------------- МЕССЕНДЖЕР ---------------- */
+    .dm-shell {
+        display:flex; background:#141414; border:1px solid rgba(255,255,255,0.06); border-radius:14px;
+        overflow:hidden; height:min(640px, calc(100vh - 180px)); min-height:420px;
+    }
+    .dm-list-pane { width:300px; flex:0 0 300px; border-right:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; min-width:0; }
+    .dm-list-header { padding:16px 18px 12px; font-size:13px; text-transform:uppercase; letter-spacing:0.4px; color:#fff; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .dm-list { flex:1; overflow-y:auto; }
+    .dm-list-empty { padding:26px 18px; text-align:center; color:#666; font-size:12.5px; line-height:1.6; }
+
+    .dm-item { display:flex; gap:11px; align-items:center; padding:12px 16px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.035); transition:0.12s; }
+    .dm-item:hover { background:rgba(255,255,255,0.03); }
+    .dm-item.active { background:rgba(46,204,113,0.1); }
+    .dm-item-avatar {
+        width:42px; height:42px; border-radius:50%; flex:0 0 auto; background:linear-gradient(135deg,#2c3e50,#34495e);
+        display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; color:#eaeaea;
+    }
+    .dm-item.unread .dm-item-avatar { background:linear-gradient(135deg,#2ecc71,#27ae60); color:#04140a; }
+    .dm-item-body { min-width:0; flex:1; }
+    .dm-item-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+    .dm-item-name { font-size:13.5px; font-weight:600; color:#eee; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .dm-item.unread .dm-item-name { color:#fff; }
+    .dm-item-time { font-size:10.5px; color:#777; flex:0 0 auto; }
+    .dm-item-bottom { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px; }
+    .dm-item-preview { font-size:12px; color:#888; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .dm-item.unread .dm-item-preview { color:#ccc; }
+    .dm-item-dot { width:9px; height:9px; border-radius:50%; background:#e74c3c; flex:0 0 auto; }
+
+    .dm-chat-pane { flex:1; display:flex; flex-direction:column; min-width:0; }
+    .dm-chat-empty { flex:1; display:flex; align-items:center; justify-content:center; color:#666; font-size:13px; text-align:center; padding:20px; }
+    .dm-chat-active { flex:1; display:flex; flex-direction:column; min-height:0; }
+
+    .dm-chat-header { display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .dm-back-btn { display:none; background:transparent; border:none; color:#aaa; font-size:18px; cursor:pointer; padding:0 4px 0 0; }
+    .dm-chat-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#2ecc71,#27ae60); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; color:#04140a; flex:0 0 auto; }
+    .dm-chat-name { font-size:14px; font-weight:700; color:#fff; }
+
+    .dm-messages { flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:4px; }
+    .dm-date-sep { text-align:center; margin:14px 0 10px; }
+    .dm-date-sep span { display:inline-block; background:rgba(255,255,255,0.06); color:#999; font-size:10.5px; font-weight:600; letter-spacing:0.3px; padding:4px 12px; border-radius:20px; text-transform:capitalize; }
+    .dm-date-sep:first-child { margin-top:0; }
+    .dm-msg { display:flex; margin-bottom:6px; }
+    .dm-msg.mine { justify-content:flex-end; }
+    .dm-msg.theirs { justify-content:flex-start; }
+    .dm-msg-bubble {
+        max-width:72%; padding:9px 13px 8px; border-radius:14px; font-size:13.5px; line-height:1.45; position:relative;
+        word-wrap:break-word; white-space:pre-wrap;
+    }
+    .dm-msg.mine .dm-msg-bubble { background:#1d5c3a; color:#eafff0; border-bottom-right-radius:3px; }
+    .dm-msg.theirs .dm-msg-bubble { background:#222; color:#eee; border-bottom-left-radius:3px; }
+    .dm-msg-time { display:inline-block; font-size:9.5px; opacity:0.55; margin-left:8px; }
+    .dm-chat-empty-msg { text-align:center; color:#666; font-size:12.5px; padding:30px 10px; }
+
+    .dm-composer { display:flex; gap:10px; align-items:flex-end; padding:12px 16px; border-top:1px solid rgba(255,255,255,0.06); }
+    .dm-composer textarea {
+        flex:1; resize:none; min-height:22px; max-height:120px; overflow-y:auto;
+        background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:20px;
+        color:#eee; font-size:13.5px; font-family:inherit; line-height:1.5; padding:10px 16px;
+        box-sizing:border-box; transition:0.15s;
+    }
+    .dm-composer textarea::placeholder { color:#777; }
+    .dm-composer textarea:focus { outline:none; border-color:rgba(46,204,113,0.5); background:rgba(255,255,255,0.06); }
+    .dm-composer button {
+        width:40px; height:40px; flex:0 0 auto; background:#2ecc71; color:#04140a; border:none; border-radius:50%;
+        font-weight:700; font-size:15px; cursor:pointer; transition:0.15s; display:flex; align-items:center; justify-content:center;
+    }
+    .dm-composer button:hover { background:#27ae60; }
+
+    /* ---------------- МОБИЛЬНАЯ ВЕРСИЯ ---------------- */
+    @media (max-width: 760px) {
+        .cab-shell { flex-direction:column; padding:16px 12px 40px; gap:14px; }
+        .cab-sidenav { width:100%; flex:none; position:static; flex-direction:row; }
+        .cab-navitem { flex:1; justify-content:center; }
+        .cab-navicon { display:none; }
+
+        .dm-shell { height:calc(100vh - 220px); border-radius:12px; }
+        .dm-list-pane { width:100%; flex:1 1 auto; border-right:none; }
+        .dm-chat-pane { display:none; position:absolute; inset:0; background:#141414; }
+        .dm-shell.chat-open { position:relative; }
+        .dm-shell.chat-open .dm-list-pane { display:none; }
+        .dm-shell.chat-open .dm-chat-pane { display:flex; position:static; }
+        .dm-back-btn { display:inline-block; }
+        .dm-msg-bubble { max-width:84%; }
+    }
 </style>
 </head>
 <body>
@@ -89,41 +193,86 @@ layout: none
     </div>
 
     <div id="cabApp">
-        <div class="cab-header">
-            <div class="cab-avatar" id="cabAvatar">?</div>
-            <div>
-                <h2 id="cabName">—</h2>
-                <div class="cid-tag" id="cabCid">CID —</div>
-            </div>
-            <div class="logout-link" onclick="doLogout()">Выйти</div>
-        </div>
+        <div class="cab-shell">
+            <nav class="cab-sidenav">
+                <button class="cab-navitem active" data-tab="home" onclick="window.switchCabTab('home')">
+                    <span class="cab-navicon">🏠</span><span>Главная</span>
+                </button>
+                <button class="cab-navitem" data-tab="messenger" onclick="window.switchCabTab('messenger')">
+                    <span class="cab-navicon">💬</span><span>Мессенджер</span><span class="nav-dot" id="messengerNavDot"></span>
+                </button>
+            </nav>
 
-        <div class="stat-row">
-            <div class="stat-box"><h4>Вылетов за клиренс</h4><div class="num" id="statClr">0</div></div>
-            <div class="stat-box"><h4>Последний вылет</h4><div class="num" id="statLast" style="font-size:14px; padding-top:6px;">—</div></div>
-        </div>
+            <div class="cab-content">
 
-        <div class="card">
-            <h3>Мои полёты за клиренс</h3>
-            <div style="max-height:300px; overflow-y:auto;">
-                <table class="roster-table" style="font-size:12px;">
-                    <thead><tr><th>Дата</th><th>Позывной</th><th>Маршрут</th><th>Тип ВС</th></tr></thead>
-                    <tbody id="flightsBody"></tbody>
-                </table>
-            </div>
-        </div>
+                <!-- ================= ГЛАВНАЯ ================= -->
+                <div class="cab-tab" id="tabHome">
+                    <div class="cab-header">
+                        <div class="cab-avatar" id="cabAvatar">?</div>
+                        <div>
+                            <h2 id="cabName">—</h2>
+                            <div class="cid-tag" id="cabCid">CID —</div>
+                        </div>
+                        <div class="logout-link" onclick="doLogout()">Выйти</div>
+                    </div>
 
-        <div class="card">
-            <h3>Связь с администрацией</h3>
-            <div class="bot-actions">
-                <button onclick="openComposer('help')">🆘 Помощь</button>
-                <button onclick="openComposer('bug')">🐞 Сообщить о баге</button>
-                <button onclick="openComposer('idea')">💡 Предложить идею</button>
-            </div>
-            <div class="chat-msgs" id="chatMsgsBox"><div class="chat-empty">Пока нет сообщений — выберите тему выше</div></div>
-            <div class="chat-composer" id="chatComposer">
-                <textarea id="chatInput" rows="4" placeholder="Опишите ваш вопрос..." oninput="autoGrow(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendMessage(); }"></textarea>
-                <button onclick="sendMessage()">Отправить</button>
+                    <div class="stat-row">
+                        <div class="stat-box"><h4>Вылетов за клиренс</h4><div class="num" id="statClr">0</div></div>
+                        <div class="stat-box"><h4>Последний вылет</h4><div class="num" id="statLast" style="font-size:14px; padding-top:6px;">—</div></div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Мои полёты за клиренс</h3>
+                        <div style="max-height:300px; overflow-y:auto;">
+                            <table class="roster-table" style="font-size:12px;">
+                                <thead><tr><th>Дата</th><th>Позывной</th><th>Маршрут</th><th>Тип ВС</th></tr></thead>
+                                <tbody id="flightsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Связь с администрацией</h3>
+                        <div class="bot-actions">
+                            <button onclick="openComposer('help')">🆘 Помощь</button>
+                            <button onclick="openComposer('bug')">🐞 Сообщить о баге</button>
+                            <button onclick="openComposer('idea')">💡 Предложить идею</button>
+                        </div>
+                        <div class="chat-msgs" id="chatMsgsBox"><div class="chat-empty">Пока нет сообщений — выберите тему выше</div></div>
+                        <div class="chat-composer" id="chatComposer">
+                            <textarea id="chatInput" rows="4" placeholder="Опишите ваш вопрос..." oninput="autoGrow(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendMessage(); }"></textarea>
+                            <button onclick="sendMessage()">Отправить</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= МЕССЕНДЖЕР ================= -->
+                <div class="cab-tab" id="tabMessenger" style="display:none;">
+                    <div class="dm-shell" id="dmShell">
+                        <div class="dm-list-pane" id="dmListPane">
+                            <div class="dm-list-header">Сообщения</div>
+                            <div class="dm-list" id="dmList">
+                                <div class="dm-list-empty">Загрузка...</div>
+                            </div>
+                        </div>
+                        <div class="dm-chat-pane" id="dmChatPane">
+                            <div class="dm-chat-empty" id="dmChatEmpty">Выберите диалог слева или нажмите «Написать в ЛС» напротив пилота в ростере</div>
+                            <div class="dm-chat-active" id="dmChatActive" style="display:none;">
+                                <div class="dm-chat-header">
+                                    <button class="dm-back-btn" id="dmBackBtn" onclick="window.closeDmChat()">←</button>
+                                    <div class="dm-chat-avatar" id="dmChatAvatar">?</div>
+                                    <div class="dm-chat-name" id="dmChatName">—</div>
+                                </div>
+                                <div class="dm-messages" id="dmMessages"></div>
+                                <div class="dm-composer">
+                                    <textarea id="dmInput" rows="1" placeholder="Написать сообщение..." oninput="window.autoGrowDm(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); window.sendDmMessage(); }"></textarea>
+                                    <button onclick="window.sendDmMessage()" title="Отправить">➤</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -196,13 +345,23 @@ window.doLogout = function() {
 
 // При открытии страницы пробуем восстановить сохранённый вход в ЛК,
 // заново проверяя CID+пароль в Firebase (на случай, если пароль сменили).
+// Если своей сессии ЛК ещё нет — пробуем подхватить общий вход с сайта
+// (кнопка «Войти» в шапке), чтобы переход по кнопке «Написать в ЛС»
+// из ростера не требовал повторного ввода CID/пароля.
 (async function restoreSession() {
-    const raw = localStorage.getItem(CABINET_SESSION_KEY);
+    let raw = localStorage.getItem(CABINET_SESSION_KEY);
+    if (!raw) {
+        const siteCid = localStorage.getItem('vatsim_pilot_cid');
+        if (siteCid) {
+            raw = JSON.stringify({ cid: siteCid, password: localStorage.getItem('vc_pilot_pwd') || '' });
+        }
+    }
     if (!raw) return;
     try {
         const { cid, password } = JSON.parse(raw);
         const ok = await verifyPilot(cid, password);
         if (ok) {
+            localStorage.setItem(CABINET_SESSION_KEY, JSON.stringify({ cid, password }));
             enterCabinet(cid);
         } else {
             localStorage.removeItem(CABINET_SESSION_KEY);
@@ -235,6 +394,27 @@ async function enterCabinet(cid) {
 
     loadFlights();
     ensureThreadAndListen();
+    listenDmThreads();
+    handleDeepLink();
+}
+
+/* ---------------- ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК (Главная / Мессенджер) ---------------- */
+window.switchCabTab = function(tab) {
+    document.querySelectorAll('.cab-navitem').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+    document.getElementById('tabHome').style.display = tab === 'home' ? 'block' : 'none';
+    document.getElementById('tabMessenger').style.display = tab === 'messenger' ? 'block' : 'none';
+};
+
+// Открытие ЛК по ссылке из ростера: cabinet.html?dm=CID&name=Имя
+function handleDeepLink() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const dmCid = params.get('dm');
+        if (!dmCid) return;
+        const dmName = params.get('name') || '';
+        window.switchCabTab('messenger');
+        window.openDmThread(dmCid, dmName);
+    } catch (e) { console.error(e); }
 }
 
 /* ---------------- ПОЛЁТЫ ЗА КЛИРЕНС ---------------- */
@@ -259,7 +439,7 @@ async function loadFlights() {
     } catch (e) { console.error('Ошибка загрузки полётов:', e); }
 }
 
-/* ---------------- ЧАТ-БОТ ---------------- */
+/* ---------------- ЧАТ С АДМИНИСТРАЦИЕЙ (техподдержка) ---------------- */
 window.openComposer = function(category) {
     pendingCategory = category;
     const composer = document.getElementById('chatComposer');
@@ -318,6 +498,209 @@ function ensureThreadAndListen() {
         setDoc(doc(db, 'chat_threads', currentCid), { unreadForUser: false }, { merge: true }).catch(() => {});
     });
 }
+
+/* =========================================================
+   МЕССЕНДЖЕР (личные сообщения между пилотами)
+   Коллекция dm_threads/{threadId} — threadId = отсортированная
+   пара CID через "_", поле participants: [cidA, cidB],
+   names: {cid: имя}, lastMessage/lastTimestamp/lastFrom,
+   unread: {cid: bool}. Сообщения — подколлекция messages.
+   ========================================================= */
+let dmThreadsCache = [];
+let unsubDmThreads = null;
+let unsubDmMessages = null;
+let activeDmCid = null;
+let activeDmName = null;
+
+function dmThreadId(a, b) {
+    const x = a.toString(), y = b.toString();
+    const nx = Number(x), ny = Number(y);
+    if (!isNaN(nx) && !isNaN(ny) && x !== '' && y !== '') return nx < ny ? `${x}_${y}` : `${y}_${x}`;
+    return x < y ? `${x}_${y}` : `${y}_${x}`;
+}
+
+function listenDmThreads() {
+    if (unsubDmThreads) { unsubDmThreads(); unsubDmThreads = null; }
+    unsubDmThreads = onSnapshot(query(collection(db, 'dm_threads'), where('participants', 'array-contains', currentCid)), snap => {
+        dmThreadsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        dmThreadsCache.sort((a, b) => new Date(b.lastTimestamp || 0) - new Date(a.lastTimestamp || 0));
+        renderDmList();
+    }, err => console.error('Ошибка загрузки диалогов:', err));
+}
+
+function renderDmList() {
+    const listEl = document.getElementById('dmList');
+    if (!listEl) return;
+
+    if (!dmThreadsCache.length) {
+        listEl.innerHTML = `<div class="dm-list-empty">Пока нет диалогов.<br>Нажмите «Написать в ЛС» напротив пилота в разделе «Состав компании».</div>`;
+    } else {
+        listEl.innerHTML = dmThreadsCache.map(t => {
+            const otherCid = (t.participants || []).find(c => c && c.toString() !== currentCid.toString());
+            if (!otherCid) return '';
+            const otherName = (t.names && t.names[otherCid]) || ('CID ' + otherCid);
+            const unread = !!(t.unread && t.unread[currentCid]);
+            const isActive = !!(activeDmCid && otherCid.toString() === activeDmCid.toString());
+            const timeStr = t.lastTimestamp ? formatListTime(new Date(t.lastTimestamp)) : '';
+            const mine = t.lastFrom === currentCid;
+            const previewText = (mine ? 'Вы: ' : '') + (t.lastMessage || '');
+            const safeName = otherName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+            return `
+                <div class="dm-item ${unread ? 'unread' : ''} ${isActive ? 'active' : ''}" onclick="window.openDmThread('${otherCid}', '${safeName}')">
+                    <div class="dm-item-avatar">${escapeHtml(otherName.trim().charAt(0).toUpperCase() || '?')}</div>
+                    <div class="dm-item-body">
+                        <div class="dm-item-top">
+                            <span class="dm-item-name">${escapeHtml(otherName)}</span>
+                            <span class="dm-item-time">${timeStr}</span>
+                        </div>
+                        <div class="dm-item-bottom">
+                            <span class="dm-item-preview">${escapeHtml(previewText)}</span>
+                            ${unread ? '<span class="dm-item-dot"></span>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    updateMessengerNavDot();
+}
+
+function updateMessengerNavDot() {
+    const anyUnread = dmThreadsCache.some(t => t.unread && t.unread[currentCid]);
+    document.getElementById('messengerNavDot')?.classList.toggle('show', anyUnread);
+}
+
+function formatListTime(d) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const dd = new Date(d); dd.setHours(0, 0, 0, 0);
+    if (dd.getTime() === today.getTime()) return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+}
+
+function formatDayLabel(d) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const dd = new Date(d); dd.setHours(0, 0, 0, 0);
+    if (dd.getTime() === today.getTime()) return 'Сегодня';
+    if (dd.getTime() === yesterday.getTime()) return 'Вчера';
+    const opts = { day: '2-digit', month: 'long' };
+    if (dd.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
+    return d.toLocaleDateString('ru-RU', opts);
+}
+
+window.openDmThread = function(otherCid, otherName) {
+    otherCid = otherCid.toString();
+    if (otherCid === currentCid.toString()) return;
+
+    activeDmCid = otherCid;
+    const cachedThread = dmThreadsCache.find(t => (t.participants || []).some(c => c && c.toString() === otherCid));
+    activeDmName = otherName || (cachedThread && cachedThread.names && cachedThread.names[otherCid]) || ('CID ' + otherCid);
+
+    document.getElementById('dmChatEmpty').style.display = 'none';
+    document.getElementById('dmChatActive').style.display = 'flex';
+    document.getElementById('dmChatName').textContent = activeDmName;
+    document.getElementById('dmChatAvatar').textContent = activeDmName.trim().charAt(0).toUpperCase() || '?';
+    document.getElementById('dmShell').classList.add('chat-open');
+
+    listenDmMessages(otherCid);
+    markDmThreadRead(otherCid);
+    renderDmList();
+
+    // Убираем dm/name из адресной строки, чтобы обновление страницы не переоткрывало тот же чат принудительно
+    if (window.history && window.history.replaceState) {
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+};
+
+window.closeDmChat = function() {
+    document.getElementById('dmShell').classList.remove('chat-open');
+};
+
+function listenDmMessages(otherCid) {
+    if (unsubDmMessages) { unsubDmMessages(); unsubDmMessages = null; }
+    const threadId = dmThreadId(currentCid, otherCid);
+    unsubDmMessages = onSnapshot(
+        query(collection(db, 'dm_threads', threadId, 'messages'), orderBy('timestamp', 'asc')),
+        snap => {
+            renderDmMessages(snap.docs.map(d => d.data()));
+            markDmThreadRead(otherCid);
+        },
+        err => console.error('Ошибка загрузки сообщений:', err)
+    );
+}
+
+function renderDmMessages(msgs) {
+    const box = document.getElementById('dmMessages');
+    if (!box) return;
+    if (!msgs.length) {
+        box.innerHTML = `<div class="dm-chat-empty-msg">Сообщений пока нет. Напишите первым!</div>`;
+        return;
+    }
+
+    let html = '';
+    let lastDateKey = null;
+    msgs.forEach(m => {
+        const d = new Date(m.timestamp);
+        const dateKey = d.toDateString();
+        if (dateKey !== lastDateKey) {
+            html += `<div class="dm-date-sep"><span>${formatDayLabel(d)}</span></div>`;
+            lastDateKey = dateKey;
+        }
+        const mine = m.from === currentCid;
+        const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        html += `
+            <div class="dm-msg ${mine ? 'mine' : 'theirs'}">
+                <div class="dm-msg-bubble">${escapeHtml(m.text || '')}<span class="dm-msg-time">${timeStr}</span></div>
+            </div>
+        `;
+    });
+
+    box.innerHTML = html;
+    box.scrollTop = box.scrollHeight;
+}
+
+function markDmThreadRead(otherCid) {
+    const threadId = dmThreadId(currentCid, otherCid);
+    const exists = dmThreadsCache.some(t => t.id === threadId);
+    if (!exists) return; // диалог ещё не создан (ни одного сообщения) — нечего помечать
+    setDoc(doc(db, 'dm_threads', threadId), { unread: { [currentCid]: false } }, { merge: true }).catch(() => {});
+}
+
+window.autoGrowDm = function(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+};
+
+window.sendDmMessage = async function() {
+    const input = document.getElementById('dmInput');
+    if (!input || !activeDmCid) return;
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    input.style.height = 'auto';
+
+    const nowIso = new Date().toISOString();
+    const threadId = dmThreadId(currentCid, activeDmCid);
+
+    try {
+        await addDoc(collection(db, 'dm_threads', threadId, 'messages'), {
+            from: currentCid, text, timestamp: nowIso
+        });
+        await setDoc(doc(db, 'dm_threads', threadId), {
+            participants: [currentCid, activeDmCid],
+            names: { [currentCid]: currentName, [activeDmCid]: activeDmName },
+            lastMessage: text,
+            lastTimestamp: nowIso,
+            lastFrom: currentCid,
+            unread: { [currentCid]: false, [activeDmCid]: true }
+        }, { merge: true });
+    } catch (e) {
+        console.error(e);
+        alert('Не удалось отправить сообщение. Попробуйте ещё раз.');
+    }
+};
 
 function escapeHtml(str) {
     return (str || '').toString().replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
