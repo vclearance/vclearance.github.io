@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if page.title %}{{ page.title }} | vClearance Virtual Airline{% else %}vClearance Virtual Airline | VATSIM Community{% endif %}</title>
+    <meta name="description" content="{% if page.description %}{{ page.description }}{% else %}vClearance — виртуальная авиакомпания сообщества VATSIM. Свободные вылеты, живой ростер, регулярные ивенты и дружное авиационное братство.{% endif %}">
+    <link rel="icon" href="https://i.imgur.com/X9EWcyh.png">
+    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+</head>
+<body>
+
+    <header>
+        <div class="container navbar">
+            <div class="logo-links-wrapper">
+                <img src="https://i.imgur.com/X9EWcyh.png" alt="vClearance Logo" class="logo-img">
+                <img src="https://imgur.com/Xxznh5y.png" alt="VATSIM Logo" class="vatsim-logo-header">
+
+                <a href="{{ '/' | relative_url }}" class="home-btn lang" data-ru="На главную" data-en="Home">На главную</a>
+
+                <div class="online-counter" id="globalOnlineCounter">
+                    <span class="blinking-dot"></span>
+                    <span class="counter-text lang" data-ru="0 в сети" data-en="0 online">0 в сети</span>
+                </div>
+            </div>
+
+            <button class="menu-toggle" id="mobileMenuBtn" aria-label="Открыть меню">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <div class="nav-container" id="navContainer">
+                <ul class="nav-links">
+                    <li><a href="{{ '/about.html' | relative_url }}" class="lang{% if page.nav == 'about' %} nav-active{% endif %}" data-ru="О компании" data-en="About" onclick="closeMenu()">О компании</a></li>
+                    <li><a href="{{ '/fleet.html' | relative_url }}" class="lang{% if page.nav == 'fleet' %} nav-active{% endif %}" data-ru="Ливреи" data-en="Liveries" onclick="closeMenu()">Ливреи</a></li>
+                    <li><a href="{{ '/events.html' | relative_url }}" class="lang{% if page.nav == 'events' %} nav-active{% endif %}" data-ru="Ивенты" data-en="Events" onclick="closeMenu()">Ивенты</a></li>
+                    <li><a href="{{ '/roster.html' | relative_url }}" class="lang{% if page.nav == 'roster' %} nav-active{% endif %}" data-ru="Участники" data-en="Roster" onclick="closeMenu()">Участники</a></li>
+                    <li><a href="{{ '/faq.html' | relative_url }}" class="lang{% if page.nav == 'faq' %} nav-active{% endif %}" data-ru="FAQ" data-en="FAQ" onclick="closeMenu()">FAQ</a></li>
+                    <li><a href="{{ '/join.html' | relative_url }}" class="lang{% if page.nav == 'join' %} nav-active{% endif %}" data-ru="Вступить" data-en="Join Us" onclick="closeMenu()">Вступить</a></li>
+                </ul>
+
+                <div class="profile-widget" id="profileWidget"></div>
+
+                <div class="dropdown lang-dropdown" id="langDropdown">
+                    <button class="lang-current" onclick="toggleMobileLang(event)">
+                        <span>
+                            <span id="currentFlag">🇷🇺</span>
+                            <span id="currentText">RU</span>
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><button class="lang-option" onclick="changeLanguage('ru')">🇷🇺 RU</button></li>
+                        <li><button class="lang-option" onclick="changeLanguage('en')">🇬🇧 EN</button></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    {{ content }}
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4 class="lang" data-ru="Навигация" data-en="Navigation">Навигация</h4>
+                    <ul class="footer-links">
+                        <li><a href="{{ '/about.html' | relative_url }}" class="lang" data-ru="О компании" data-en="About">О компании</a></li>
+                        <li><a href="{{ '/fleet.html' | relative_url }}" class="lang" data-ru="Ливреи" data-en="Liveries">Ливреи</a></li>
+                        <li><a href="{{ '/events.html' | relative_url }}" class="lang" data-ru="Ивенты" data-en="Events">Ивенты</a></li>
+                        <li><a href="{{ '/roster.html' | relative_url }}" class="lang" data-ru="Участники" data-en="Roster">Участники</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4 class="lang" data-ru="Сообщество" data-en="Community">Сообщество</h4>
+                    <ul class="footer-links">
+                        <li><a href="{{ '/faq.html' | relative_url }}" class="lang" data-ru="Частые вопросы" data-en="FAQ">Частые вопросы</a></li>
+                        <li><a href="{{ '/join.html' | relative_url }}" class="lang" data-ru="Как вступить" data-en="How to Join">Как вступить</a></li>
+                        <li><a href="https://discord.gg/583FFvkwfv" target="_blank">Discord Server</a></li>
+                        <li><a href="https://vatsim.net" target="_blank">VATSIM.net</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4 class="lang" data-ru="Наши базы" data-en="Our Hubs">Наши базы</h4>
+                    <ul class="footer-links footer-static">
+                        <li>Шереметьево (UUEE)</li>
+                        <li>Минск (UMMS)</li>
+                        <li>Казань (UWKD)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 vClearance Virtual Airline. All flights and operations are purely simulated.</p>
+                <p><span class="lang" data-ru="Проект некоммерческого сообщества в сети " data-en="A non-profit community project on the ">Проект некоммерческого сообщества в сети </span><a href="https://vatsim.net" target="_blank">VATSIM</a></p>
+                <p style="margin-top: 15px;"><a onclick="openModal()" class="lang" data-ru="Политика конфиденциальности (GDPR)" data-en="Privacy Policy (GDPR)">Политика конфиденциальности (GDPR)</a></p>
+            </div>
+        </div>
+    </footer>
+
+    {% include modals.html %}
+
+    <script type="module" src="{{ '/assets/js/main.js' | relative_url }}"></script>
+</body>
+</html>
