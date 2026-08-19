@@ -339,6 +339,74 @@
             });
         }
 
+        // --- Блокировки мессенджера (только Основатель может блокировать/разблокировать) ---
+        // messenger_blocks/{cid}: { blockAt: ISO-время, setBy, setAt }
+        // Блокировка вступает в силу не сразу, а через 10 секунд после нажатия —
+        // это время хранится в blockAt, а реальный статус (ещё "в ожидании" или уже
+        // "активна") вычисляется на лету сравнением blockAt с текущим временем
+        // (см. window.getMessengerBlockStatus), поскольку сайт статический и не
+        // имеет сервера/крона, который мог бы сработать ровно через 10 секунд.
+        window.messengerBlocksMap = {};
+        function listenToMessengerBlocks() {
+            onSnapshot(collection(db, 'messenger_blocks'), (snapshot) => {
+                const map = {};
+                snapshot.forEach((docSnap) => {
+                    map[docSnap.id] = docSnap.data();
+                });
+                window.messengerBlocksMap = map;
+                if (window.lastVatsimData) renderRoster(window.lastVatsimData);
+                else renderRoster({ pilots: [], controllers: [] });
+            });
+        }
+
+        // Возвращает текущий статус блокировки мессенджера для CID:
+        // { none: true } — блокировки нет;
+        // { pending: true, blockAt, msLeft } — блокировка назначена, но 10 секунд ещё не прошли;
+        // { active: true, blockAt } — блокировка уже вступила в силу.
+        window.getMessengerBlockStatus = function(cid) {
+            const info = window.messengerBlocksMap ? window.messengerBlocksMap[cid.toString()] : null;
+            if (!info || !info.blockAt) return { none: true };
+            const blockAtMs = new Date(info.blockAt).getTime();
+            const msLeft = blockAtMs - Date.now();
+            if (msLeft <= 0) return { active: true, blockAt: info.blockAt, info };
+            return { pending: true, blockAt: info.blockAt, msLeft, info };
+        };
+
+        window.blockPilotMessenger = async function(cid, name) {
+            if (!window.isFounder()) {
+                alert('Только Основатель может блокировать мессенджер!');
+                return;
+            }
+            const cidStr = cid.toString();
+            if (!confirm(`Заблокировать мессенджер для ${name || ('CID ' + cidStr)}?\n\nБлокировка вступит в силу через 10 секунд.`)) return;
+            try {
+                const blockAt = new Date(Date.now() + 10 * 1000).toISOString();
+                await setDoc(doc(db, 'messenger_blocks', cidStr), {
+                    blockAt,
+                    setBy: localStorage.getItem('vatsim_pilot_cid') || null,
+                    setAt: new Date().toISOString()
+                });
+                await window.logAudit('Блокировка мессенджера', `CID: ${cidStr} (вступит в силу через 10 секунд)`);
+            } catch (error) {
+                console.error('Ошибка блокировки мессенджера:', error);
+                alert('Произошла ошибка при блокировке мессенджера.');
+            }
+        };
+
+        window.unblockPilotMessenger = async function(cid) {
+            if (!window.isFounder()) {
+                alert('Только Основатель может снимать блокировку мессенджера!');
+                return;
+            }
+            try {
+                await deleteDoc(doc(db, 'messenger_blocks', cid.toString()));
+                await window.logAudit('Снятие блокировки мессенджера', `CID: ${cid}`);
+            } catch (error) {
+                console.error('Ошибка снятия блокировки мессенджера:', error);
+                alert('Произошла ошибка при снятии блокировки мессенджера.');
+            }
+        };
+
         // --- Discord-теги пилотов (видно только администраторам) ---
         window.discordMap = {};
         function listenToPilotDiscord() {
@@ -1649,6 +1717,21 @@
                     : `<div class="pilot-context-item" onclick="window.closePilotContextMenu(); window.openAddAdminModalFor('${cid}', '${safeName}');">+ Админ</div>`;
             }
 
+            // Блокировка мессенджера — доступна только Основателю (owner) и не
+            // применяется к самому Основателю. Пункт меню меняется в зависимости
+            // от текущего статуса: нет блокировки / блокировка ожидает (10 мин) / уже активна.
+            if (window.isFounder() && !isTargetFounder) {
+                const blockStatus = window.getMessengerBlockStatus(cid);
+                if (blockStatus.active) {
+                    itemsHtml += `<div class="pilot-context-item" onclick="window.closePilotContextMenu(); window.unblockPilotMessenger('${cid}');">✅ Разблокировать мессенджер</div>`;
+                } else if (blockStatus.pending) {
+                    const secsLeft = Math.max(1, Math.ceil(blockStatus.msLeft / 1000));
+                    itemsHtml += `<div class="pilot-context-item danger" onclick="window.closePilotContextMenu(); window.unblockPilotMessenger('${cid}');">⏳ Блокировка через ${secsLeft} сек · отменить</div>`;
+                } else {
+                    itemsHtml += `<div class="pilot-context-item danger" onclick="window.closePilotContextMenu(); window.blockPilotMessenger('${cid}', '${safeName}');">🚫 Заблокировать мессенджер</div>`;
+                }
+            }
+
             if (!isBasePilot && !isTargetFounder) {
                 itemsHtml += `<div class="pilot-context-item danger" onclick="window.closePilotContextMenu(); window.deletePilot('${cid}');">🗑️ Удалить участника</div>`;
             }
@@ -2313,6 +2396,7 @@
             listenToPilots(); 
             listenToAdmins(); 
             listenToPilotDiscord();
+            listenToMessengerBlocks();
             listenToRecentFlights();
             
             renderRoster({ pilots: [], controllers: [] }); 
