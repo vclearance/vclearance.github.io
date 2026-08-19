@@ -79,12 +79,23 @@
         };
 
         // --- Слушатель для Журнала Аудита ---
+        // ВАЖНО: раньше этот слушатель запускался в initApp() для КАЖДОГО посетителя сайта
+        // (даже неавторизованных) и читал ВСЮ коллекцию audit_logs целиком без лимита —
+        // именно это стало главной причиной резкого роста чтений Firestore (2М+ в день).
+        // Теперь слушатель запускается только когда Основатель/Админ реально открывает
+        // Панель Управления, ограничен последними 300 записями и отписывается при закрытии.
+        let unsubAuditLogs = null;
         function listenToAuditLogs() {
-            const q = query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'));
-            onSnapshot(q, (snapshot) => {
+            if (unsubAuditLogs) return; // уже подписаны — не плодим повторные слушатели
+            const q = query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'), limit(300));
+            unsubAuditLogs = onSnapshot(q, (snapshot) => {
                 window.currentAuditDocs = snapshot;
                 window.renderAuditLogs();
             });
+        }
+        function stopListeningToAuditLogs() {
+            if (unsubAuditLogs) { unsubAuditLogs(); unsubAuditLogs = null; }
+            window.currentAuditDocs = null;
         }
 
         window.renderAuditLogs = function() {
@@ -1524,6 +1535,7 @@
             localStorage.removeItem(ADMIN_CACHE_KEY);
             window.currentAdminRole = null;
             window.currentAdminCid = null;
+            stopListeningToAuditLogs();
             window.updateProfileWidget();
             if (window.lastVatsimData) renderRoster(window.lastVatsimData);
             renderRecentFlights();
@@ -1554,7 +1566,17 @@
                 const roleLabel = roleLabelRu(window.currentAdminRole);
                 infoDiv.innerHTML = `Вы вошли как <strong>${roleLabel}</strong> (CID ${window.currentAdminCid}) &nbsp;·&nbsp; <span style="color:#e74c3c; cursor:pointer; text-decoration:underline;" onclick="window.logoutAdmin()">Выйти из админки</span>`;
             }
+            // Журнал аудита читаем только сейчас, по факту открытия панели,
+            // и только для Основателя/Админа (Ливери-мейкеру он не нужен и не показывается).
+            if (window.isAdmin && window.isAdmin()) {
+                listenToAuditLogs();
+            }
             document.getElementById('adminPanelModal').classList.add('open');
+        }
+
+        window.closeAdminPanel = function() {
+            document.getElementById('adminPanelModal').classList.remove('open');
+            stopListeningToAuditLogs();
         }
 
         window.openAddAdminModalFor = function(cid, name) {
@@ -2291,7 +2313,6 @@
             listenToPilots(); 
             listenToAdmins(); 
             listenToPilotDiscord();
-            listenToAuditLogs();
             listenToRecentFlights();
             
             renderRoster({ pilots: [], controllers: [] }); 
