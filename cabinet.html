@@ -95,6 +95,10 @@ layout: none
     .dm-list-header { padding:16px 18px 12px; font-size:13px; text-transform:uppercase; letter-spacing:0.4px; color:#fff; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.06); }
     .dm-list { flex:1; overflow-y:auto; padding-bottom:60px; }
     .dm-list-empty { padding:26px 18px; text-align:center; color:#666; font-size:12.5px; line-height:1.6; }
+    .messenger-locked { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px 20px; color:#999; gap:10px; }
+    .messenger-locked .lock-icon { font-size:34px; margin-bottom:6px; }
+    .messenger-locked .lock-title { font-size:15px; font-weight:700; color:#fff; }
+    .messenger-locked .lock-sub { font-size:12.5px; color:#888; max-width:320px; line-height:1.6; }
 
     .dm-item { display:flex; gap:11px; align-items:center; padding:12px 16px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.035); transition:0.12s; }
     .dm-item:hover { background:rgba(255,255,255,0.03); }
@@ -351,6 +355,11 @@ layout: none
 
                 <!-- ================= МЕССЕНДЖЕР ================= -->
                 <div class="cab-tab" id="tabMessenger" style="display:none;">
+                    <div class="messenger-locked" id="messengerLocked" style="display:none;">
+                        <div class="lock-icon">🚫</div>
+                        <div class="lock-title">Мессенджер заблокирован</div>
+                        <div class="lock-sub">Администрация ограничила вам доступ к мессенджеру. Обратитесь на вкладку «Главная», чтобы связаться с администрацией.</div>
+                    </div>
                     <div class="dm-shell" id="dmShell">
                         <div class="dm-list-pane" id="dmListPane">
                             <div class="dm-list-header">Сообщения</div>
@@ -555,7 +564,46 @@ async function enterCabinet(cid) {
     listenGroupThreads();
     listenAdmins();
     listenAvatars();
+    listenMessengerBlock();
     handleDeepLink();
+}
+
+/* ---------------- БЛОКИРОВКА МЕССЕНДЖЕРА (устанавливается Основателем из ростера) ----------------
+   messenger_blocks/{cid}: { blockAt: ISO-время, setBy, setAt }
+   Блокировка вступает в силу через 10 секунд после того, как её назначили, поэтому
+   реальный статус ("ещё не наступила" / "уже активна") пересчитывается на лету
+   сравнением blockAt с текущим временем — как в момент прихода данных из Firestore,
+   так и по таймеру (сайт статический, отдельного сервера/крона нет). */
+let messengerBlockInfo = null;   // { blockAt } | null
+let messengerBlockTimer = null;
+
+function listenMessengerBlock() {
+    onSnapshot(doc(db, 'messenger_blocks', currentCid), snap => {
+        messengerBlockInfo = snap.exists() ? snap.data() : null;
+        applyMessengerLockUI();
+    }, err => console.error('Ошибка проверки блокировки мессенджера:', err));
+
+    if (messengerBlockTimer) clearInterval(messengerBlockTimer);
+    // Раз в секунду перепроверяем — чтобы статус "ожидает" сам сменился на
+    // "активна" через 10 секунд, даже если вкладка мессенджера уже открыта.
+    // Проверяем раз в секунду — иначе при 10-секундной задержке смена статуса
+    // была бы заметна с опозданием.
+    messengerBlockTimer = setInterval(applyMessengerLockUI, 1000);
+}
+
+function isMessengerBlocked() {
+    if (!messengerBlockInfo || !messengerBlockInfo.blockAt) return false;
+    return new Date(messengerBlockInfo.blockAt).getTime() <= Date.now();
+}
+
+function applyMessengerLockUI() {
+    const lockedEl = document.getElementById('messengerLocked');
+    const shellEl = document.getElementById('dmShell');
+    if (!lockedEl || !shellEl) return;
+    const blocked = isMessengerBlocked();
+    lockedEl.style.display = blocked ? 'flex' : 'none';
+    shellEl.style.display = blocked ? 'none' : '';
+    if (blocked) window.closeDmChat();
 }
 
 /* ---------------- ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК (Главная / Мессенджер) ---------------- */
@@ -564,6 +612,7 @@ window.switchCabTab = function(tab) {
     document.getElementById('tabHome').style.display = tab === 'home' ? 'block' : 'none';
     document.getElementById('tabMessenger').style.display = tab === 'messenger' ? 'block' : 'none';
     document.getElementById('tabSettings').style.display = tab === 'settings' ? 'block' : 'none';
+    if (tab === 'messenger') applyMessengerLockUI();
     if (tab === 'settings') {
         const input = document.getElementById('avatarUrlInput');
         if (input) input.value = avatarsMap[currentCid] || '';
@@ -610,7 +659,7 @@ function handleDeepLink() {
         if (!dmCid) return;
         const dmName = params.get('name') || '';
         window.switchCabTab('messenger');
-        window.openDmThread(dmCid, dmName);
+        if (!isMessengerBlocked()) window.openDmThread(dmCid, dmName);
     } catch (e) { console.error(e); }
 }
 
@@ -922,6 +971,7 @@ function formatDayLabel(d) {
 
 /* ---------------- ОТКРЫТИЕ ЛИЧНОГО ДИАЛОГА ---------------- */
 window.openDmThread = function(otherCid, otherName) {
+    if (isMessengerBlocked()) { applyMessengerLockUI(); return; }
     otherCid = otherCid.toString();
     if (otherCid === currentCid.toString()) return;
 
@@ -953,6 +1003,7 @@ window.openDmThread = function(otherCid, otherName) {
 
 /* ---------------- ОТКРЫТИЕ ГРУППЫ ---------------- */
 window.openGroupThread = function(groupId) {
+    if (isMessengerBlocked()) { applyMessengerLockUI(); return; }
     const g = groupThreadsCache.find(x => x.id === groupId);
     if (!g) return;
 
@@ -1059,6 +1110,7 @@ window.autoGrowDm = function(el) {
 
 /* ---------------- ОТПРАВКА СООБЩЕНИЯ (ЛС или группа) ---------------- */
 window.sendDmMessage = async function() {
+    if (isMessengerBlocked()) { applyMessengerLockUI(); return; }
     const input = document.getElementById('dmInput');
     if (!input || !activeThreadKind) return;
     const text = input.value.trim();
