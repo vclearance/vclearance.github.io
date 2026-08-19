@@ -340,15 +340,22 @@ layout: none
 
                     <div class="card">
                         <h3>Связь с администрацией</h3>
-                        <div class="bot-actions">
-                            <button onclick="openComposer('help')">🆘 Помощь</button>
-                            <button onclick="openComposer('bug')">🐞 Сообщить о баге</button>
-                            <button onclick="openComposer('idea')">💡 Предложить идею</button>
+                        <div class="messenger-locked" id="supportLocked" style="display:none; padding:24px 10px;">
+                            <div class="lock-icon">🚫</div>
+                            <div class="lock-title">Поддержка заблокирована</div>
+                            <div class="lock-sub">Администрация ограничила вам доступ к чату поддержки.</div>
                         </div>
-                        <div class="chat-msgs" id="chatMsgsBox"><div class="chat-empty">Пока нет сообщений — выберите тему выше</div></div>
-                        <div class="chat-composer" id="chatComposer">
-                            <textarea id="chatInput" rows="4" placeholder="Опишите ваш вопрос..." oninput="autoGrow(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendMessage(); }"></textarea>
-                            <button onclick="sendMessage()">Отправить</button>
+                        <div id="supportBody">
+                            <div class="bot-actions">
+                                <button onclick="openComposer('help')">🆘 Помощь</button>
+                                <button onclick="openComposer('bug')">🐞 Сообщить о баге</button>
+                                <button onclick="openComposer('idea')">💡 Предложить идею</button>
+                            </div>
+                            <div class="chat-msgs" id="chatMsgsBox"><div class="chat-empty">Пока нет сообщений — выберите тему выше</div></div>
+                            <div class="chat-composer" id="chatComposer">
+                                <textarea id="chatInput" rows="4" placeholder="Опишите ваш вопрос..." oninput="autoGrow(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendMessage(); }"></textarea>
+                                <button onclick="sendMessage()">Отправить</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -565,6 +572,7 @@ async function enterCabinet(cid) {
     listenAdmins();
     listenAvatars();
     listenMessengerBlock();
+    listenSupportBlock();
     handleDeepLink();
 }
 
@@ -604,6 +612,41 @@ function applyMessengerLockUI() {
     lockedEl.style.display = blocked ? 'flex' : 'none';
     shellEl.style.display = blocked ? 'none' : '';
     if (blocked) window.closeDmChat();
+}
+
+/* ---------------- БЛОКИРОВКА ПОДДЕРЖКИ (устанавливается Основателем из ростера) ----------------
+   support_blocks/{cid}: { blockAt: ISO-время, setBy, setAt } — та же 10-секундная
+   отложенная логика, что и у блокировки мессенджера, но отдельная коллекция
+   и отдельная кнопка в ростере: блокирует только вкладку «Связь с администрацией». */
+let supportBlockInfo = null;
+let supportBlockTimer = null;
+
+function listenSupportBlock() {
+    onSnapshot(doc(db, 'support_blocks', currentCid), snap => {
+        supportBlockInfo = snap.exists() ? snap.data() : null;
+        applySupportLockUI();
+    }, err => console.error('Ошибка проверки блокировки поддержки:', err));
+
+    if (supportBlockTimer) clearInterval(supportBlockTimer);
+    supportBlockTimer = setInterval(applySupportLockUI, 1000);
+}
+
+function isSupportBlocked() {
+    if (!supportBlockInfo || !supportBlockInfo.blockAt) return false;
+    return new Date(supportBlockInfo.blockAt).getTime() <= Date.now();
+}
+
+function applySupportLockUI() {
+    const lockedEl = document.getElementById('supportLocked');
+    const bodyEl = document.getElementById('supportBody');
+    if (!lockedEl || !bodyEl) return;
+    const blocked = isSupportBlocked();
+    lockedEl.style.display = blocked ? 'flex' : 'none';
+    bodyEl.style.display = blocked ? 'none' : '';
+    if (blocked) {
+        const composer = document.getElementById('chatComposer');
+        if (composer) composer.style.display = 'none';
+    }
 }
 
 /* ---------------- ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК (Главная / Мессенджер) ---------------- */
@@ -687,6 +730,7 @@ async function loadFlights() {
 
 /* ---------------- ЧАТ С АДМИНИСТРАЦИЕЙ (техподдержка) ---------------- */
 window.openComposer = function(category) {
+    if (isSupportBlocked()) { applySupportLockUI(); return; }
     pendingCategory = category;
     const composer = document.getElementById('chatComposer');
     composer.style.display = 'flex';
@@ -702,6 +746,7 @@ window.autoGrow = function(el) {
 };
 
 window.sendMessage = async function() {
+    if (isSupportBlocked()) { applySupportLockUI(); return; }
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text) return;
