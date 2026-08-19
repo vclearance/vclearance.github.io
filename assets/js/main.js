@@ -407,6 +407,66 @@
             }
         };
 
+        // --- Блокировки чата поддержки (та же логика, отдельная коллекция) ---
+        // support_blocks/{cid}: { blockAt: ISO-время, setBy, setAt }
+        // Блокирует вкладку «Связь с администрацией» в личном кабинете (не мессенджер).
+        window.supportBlocksMap = {};
+        function listenToSupportBlocks() {
+            onSnapshot(collection(db, 'support_blocks'), (snapshot) => {
+                const map = {};
+                snapshot.forEach((docSnap) => {
+                    map[docSnap.id] = docSnap.data();
+                });
+                window.supportBlocksMap = map;
+                if (window.lastVatsimData) renderRoster(window.lastVatsimData);
+                else renderRoster({ pilots: [], controllers: [] });
+            });
+        }
+
+        window.getSupportBlockStatus = function(cid) {
+            const info = window.supportBlocksMap ? window.supportBlocksMap[cid.toString()] : null;
+            if (!info || !info.blockAt) return { none: true };
+            const blockAtMs = new Date(info.blockAt).getTime();
+            const msLeft = blockAtMs - Date.now();
+            if (msLeft <= 0) return { active: true, blockAt: info.blockAt, info };
+            return { pending: true, blockAt: info.blockAt, msLeft, info };
+        };
+
+        window.blockPilotSupport = async function(cid, name) {
+            if (!window.isFounder()) {
+                alert('Только Основатель может блокировать поддержку!');
+                return;
+            }
+            const cidStr = cid.toString();
+            if (!confirm(`Заблокировать чат поддержки для ${name || ('CID ' + cidStr)}?\n\nБлокировка вступит в силу через 10 секунд.`)) return;
+            try {
+                const blockAt = new Date(Date.now() + 10 * 1000).toISOString();
+                await setDoc(doc(db, 'support_blocks', cidStr), {
+                    blockAt,
+                    setBy: localStorage.getItem('vatsim_pilot_cid') || null,
+                    setAt: new Date().toISOString()
+                });
+                await window.logAudit('Блокировка поддержки', `CID: ${cidStr} (вступит в силу через 10 секунд)`);
+            } catch (error) {
+                console.error('Ошибка блокировки поддержки:', error);
+                alert('Произошла ошибка при блокировке поддержки.');
+            }
+        };
+
+        window.unblockPilotSupport = async function(cid) {
+            if (!window.isFounder()) {
+                alert('Только Основатель может снимать блокировку поддержки!');
+                return;
+            }
+            try {
+                await deleteDoc(doc(db, 'support_blocks', cid.toString()));
+                await window.logAudit('Снятие блокировки поддержки', `CID: ${cid}`);
+            } catch (error) {
+                console.error('Ошибка снятия блокировки поддержки:', error);
+                alert('Произошла ошибка при снятии блокировки поддержки.');
+            }
+        };
+
         // --- Discord-теги пилотов (видно только администраторам) ---
         window.discordMap = {};
         function listenToPilotDiscord() {
@@ -1717,9 +1777,9 @@
                     : `<div class="pilot-context-item" onclick="window.closePilotContextMenu(); window.openAddAdminModalFor('${cid}', '${safeName}');">+ Админ</div>`;
             }
 
-            // Блокировка мессенджера — доступна только Основателю (owner) и не
-            // применяется к самому Основателю. Пункт меню меняется в зависимости
-            // от текущего статуса: нет блокировки / блокировка ожидает (10 мин) / уже активна.
+            // Блокировка мессенджера и поддержки — доступны только Основателю (owner)
+            // и не применяются к самому Основателю. Каждый пункт меняется в
+            // зависимости от текущего статуса: нет блокировки / ожидает (10 сек) / уже активна.
             if (window.isFounder() && !isTargetFounder) {
                 const blockStatus = window.getMessengerBlockStatus(cid);
                 if (blockStatus.active) {
@@ -1729,6 +1789,18 @@
                     itemsHtml += `<div class="pilot-context-item danger" onclick="window.closePilotContextMenu(); window.unblockPilotMessenger('${cid}');">⏳ Блокировка через ${secsLeft} сек · отменить</div>`;
                 } else {
                     itemsHtml += `<div class="pilot-context-item danger" onclick="window.closePilotContextMenu(); window.blockPilotMessenger('${cid}', '${safeName}');">🚫 Заблокировать мессенджер</div>`;
+                }
+
+                // Отдельная кнопка — блокировка чата поддержки («Связь с администрацией»),
+                // работает независимо от блокировки мессенджера.
+                const supportStatus = window.getSupportBlockStatus(cid);
+                if (supportStatus.active) {
+                    itemsHtml += `<div class="pilot-context-item" onclick="window.closePilotContextMenu(); window.unblockPilotSupport('${cid}');">✅ Разблокировать поддержку</div>`;
+                } else if (supportStatus.pending) {
+                    const secsLeftSupport = Math.max(1, Math.ceil(supportStatus.msLeft / 1000));
+                    itemsHtml += `<div class="pilot-context-item danger" onclick="window.closePilotContextMenu(); window.unblockPilotSupport('${cid}');">⏳ Блокировка поддержки через ${secsLeftSupport} сек · отменить</div>`;
+                } else {
+                    itemsHtml += `<div class="pilot-context-item danger" onclick="window.closePilotContextMenu(); window.blockPilotSupport('${cid}', '${safeName}');">🚫 Заблокировать поддержку</div>`;
                 }
             }
 
@@ -2397,6 +2469,7 @@
             listenToAdmins(); 
             listenToPilotDiscord();
             listenToMessengerBlocks();
+            listenToSupportBlocks();
             listenToRecentFlights();
             
             renderRoster({ pilots: [], controllers: [] }); 
