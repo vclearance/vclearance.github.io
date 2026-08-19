@@ -102,8 +102,9 @@ async function run() {
                     needUpdateFirebase = true;
                 }
 
-                // Проверка на позывной CLR и запись в последние полеты
-                if (callsign.toUpperCase().includes('CLR') && route !== '??? ➔ ???') {
+                // Проверка на позывной CLR или CLF и запись в последние полеты
+                const upperCallsign = callsign.toUpperCase();
+                if ((upperCallsign.includes('CLR') || upperCallsign.includes('CLF')) && route !== '??? ➔ ???') {
                     const flightId = `${localPilot.cid}_${callsign}_${route}`;
                     const lastSeen = lastSeenAt.get(flightId);
                     const hoursSinceLastSeen = lastSeen
