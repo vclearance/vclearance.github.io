@@ -289,6 +289,7 @@ const BASE_PILOTS = [{ cid: "1816284", name: "Karim I." }];
 let MY_PILOTS = [...BASE_PILOTS];
 let flightsData = [];      // все clearance-вылеты (recent_flights)
 let adminsMap = {};        // cid -> role
+let pilotAuthMap = {};     // cid -> true, если пилоту уже выдан пароль
 let currentRole = null;    // 'founder' | 'admin' | 'liverymaker'
 let currentCid = null;
 let allLiveries = [];
@@ -394,6 +395,13 @@ function initData() {
         const map = {};
         snap.forEach(d => map[d.id] = d.data().role || 'admin');
         adminsMap = map;
+        renderMembers();
+    });
+
+    onSnapshot(collection(db, 'pilot_auth'), snap => {
+        const map = {};
+        snap.forEach(d => { if (d.data().password) map[d.id] = true; });
+        pilotAuthMap = map;
         renderMembers();
     });
 
@@ -616,16 +624,28 @@ window.deleteParticipant = async function(cid, name) {
     catch (e) { console.error(e); alert('Ошибка удаления.'); }
 };
 
+// Пароли участников может выдавать и Основатель, и обычный Админ.
+// Но Админ может выдать пароль только тому, у кого его ещё нет — переизрать/выдать новый
+// взамен существующего может только Основатель.
 window.generatePassword = async function(cid, name) {
-    if (currentRole !== 'founder') { alert('Только Основатель может выдавать пароли участникам!'); return; }
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-    const pwd = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    if (currentRole !== 'founder' && currentRole !== 'admin') { alert('Недостаточно прав для выдачи паролей.'); return; }
+    const cidStr = cid.toString();
     try {
-        await setDoc(doc(db, 'pilot_auth', cid.toString()), { password: pwd, mustChange: true, updatedAt: new Date().toISOString() });
-        alert(`Временный пароль для ${name} (CID ${cid}):\n\n${pwd}\n\nПередайте его лично — при входе будет предложено сменить на свой.`);
+        if (currentRole !== 'founder') {
+            const existing = await getDoc(doc(db, 'pilot_auth', cidStr));
+            if (existing.exists() && existing.data().password) {
+                alert('У этого пилота уже есть пароль. Заменить его может только Основатель.');
+                return;
+            }
+        }
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+        const pwd = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        await setDoc(doc(db, 'pilot_auth', cidStr), { password: pwd, mustChange: true, updatedAt: new Date().toISOString() });
+        showIssuedPasswordPopup(name, cidStr, pwd);
     } catch (e) { console.error(e); alert('Не удалось создать пароль.'); }
 };
 
+// Просмотр уже выданных паролей — только у Основателя.
 window.viewPassword = async function(cid) {
     if (currentRole !== 'founder') { alert('Только Основатель может просматривать пароли участников!'); return; }
     try {
@@ -634,6 +654,78 @@ window.viewPassword = async function(cid) {
         alert(`Текущий пароль CID ${cid}: ${snap.data().password}`);
     } catch (e) { console.error(e); }
 };
+
+// Всплывающее окно с выданным паролем и рабочей кнопкой копирования.
+function closeIssuedPasswordPopup() {
+    const existing = document.getElementById('issuedPwdPopup');
+    if (existing) existing.remove();
+}
+
+function showIssuedPasswordPopup(name, cid, pwd) {
+    closeIssuedPasswordPopup();
+    const overlay = document.createElement('div');
+    overlay.className = 'modal open';
+    overlay.id = 'issuedPwdPopup';
+    overlay.innerHTML = `
+        <div class="modal-content" style="max-width:420px;">
+            <button class="close-modal-btn" onclick="window.__closeIssuedPwdPopup()">&times;</button>
+            <div class="modal-header">Пароль выдан</div>
+            <div class="modal-body">
+                <p style="margin:0 0 12px;">Временный пароль для <strong>${escapeHtml(name)}</strong> (CID ${escapeHtml(cid)}). Передайте его лично — при входе будет предложено сменить на свой.</p>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input id="issuedPwdInput" type="text" readonly value="${escapeHtml(pwd)}"
+                        style="flex:1; min-width:0; font-size:16px; letter-spacing:1px; font-weight:700; color:#fff; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:9px 10px;"
+                        onclick="this.select();">
+                    <button id="issuedPwdCopyBtn" class="mini-btn green" style="margin:0; padding:9px 12px;" onclick="window.__copyIssuedPwd('${pwd.replace(/'/g, "\\'")}')">📋 Копировать</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeIssuedPasswordPopup(); });
+    const input = document.getElementById('issuedPwdInput');
+    if (input) { input.focus(); input.select(); }
+}
+
+window.__closeIssuedPwdPopup = closeIssuedPasswordPopup;
+
+window.__copyIssuedPwd = function(pwd) {
+    const btn = document.getElementById('issuedPwdCopyBtn');
+    const flashCopied = () => {
+        if (!btn) return;
+        const original = btn.textContent;
+        btn.textContent = '✅ Скопировано';
+        setTimeout(() => { btn.textContent = original; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(pwd).then(flashCopied).catch(() => fallbackCopyIssuedPwd(pwd, flashCopied));
+    } else {
+        fallbackCopyIssuedPwd(pwd, flashCopied);
+    }
+};
+
+function fallbackCopyIssuedPwd(pwd, onDone) {
+    const input = document.getElementById('issuedPwdInput');
+    try {
+        if (input) {
+            input.select();
+            input.setSelectionRange(0, pwd.length);
+        } else {
+            const tmp = document.createElement('textarea');
+            tmp.value = pwd;
+            tmp.style.position = 'fixed';
+            tmp.style.opacity = '0';
+            document.body.appendChild(tmp);
+            tmp.select();
+            document.execCommand('copy');
+            document.body.removeChild(tmp);
+            if (onDone) onDone();
+            return;
+        }
+        document.execCommand('copy');
+        if (onDone) onDone();
+    } catch (e) { console.error(e); }
+}
 
 window.toggleAdmin = async function(cid, name, makeAdmin) {
     if (currentRole !== 'founder') { alert('Только Основатель может назначать администраторов!'); return; }
@@ -677,10 +769,21 @@ function renderMembers() {
                 <td><strong>${escapeHtml(p.name)}</strong> <span style="color:#666;font-size:10px;display:block;">${cidStr}${role ? ` · ${role === 'founder' ? 'Основатель' : (role === 'liverymaker' ? 'Ливери-мейкер' : 'Админ')}` : ''}</span></td>
                 <td style="text-align:center; color:#2ecc71; font-weight:700;">${count}</td>
                 <td style="white-space:nowrap;">
-                    ${currentRole === 'founder'
-                        ? `<button class="mini-btn blue" onclick="viewPassword('${cidStr}')">Показать</button>
-                           <button class="mini-btn green" onclick="generatePassword('${cidStr}','${safeName}')">Выдать новый</button>`
-                        : `<span style="color:#666; font-size:11px;">Только у Основателя</span>`}
+                    ${(() => {
+                        const hasPwd = !!pilotAuthMap[cidStr];
+                        if (currentRole === 'founder') {
+                            // Основатель видит пароль и всегда может выдать/переиздать новый.
+                            return `<button class="mini-btn blue" onclick="viewPassword('${cidStr}')">Показать</button>
+                                    <button class="mini-btn green" onclick="generatePassword('${cidStr}','${safeName}')">${hasPwd ? 'Выдать новый' : 'Выдать'}</button>`;
+                        }
+                        if (currentRole === 'admin') {
+                            // Обычный Админ не видит пароли, но может выдать первый пароль тем, у кого его ещё нет.
+                            return hasPwd
+                                ? `<span style="color:#666; font-size:11px;">Только у Основателя</span>`
+                                : `<button class="mini-btn green" onclick="generatePassword('${cidStr}','${safeName}')">Выдать пароль</button>`;
+                        }
+                        return `<span style="color:#666; font-size:11px;">Только у Основателя</span>`;
+                    })()}
                 </td>
                 <td style="white-space:nowrap;">${delBtn}${adminBtn}</td>
             </tr>
