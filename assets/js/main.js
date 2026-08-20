@@ -554,7 +554,7 @@
         // клика на глазик (а не хранится заранее в памяти у всех посетителей сайта),
         // и повторный клик снова скрывает его без нового запроса.
         window.togglePilotPasswordVisibility = async function(cid) {
-            if (!window.isAdmin()) return;
+            if (!window.isFounder()) return;
             const valEl = document.getElementById(`pwdValue-${cid}`);
             const eyeBtn = document.getElementById(`pwdEyeBtn-${cid}`);
             const copyBtn = document.getElementById(`pwdCopyBtn-${cid}`);
@@ -592,7 +592,7 @@
         };
 
         window.copyPilotPassword = function(cid) {
-            if (!window.isAdmin()) return;
+            if (!window.isFounder()) return;
             const valEl = document.getElementById(`pwdValue-${cid}`);
             const copyBtn = document.getElementById(`pwdCopyBtn-${cid}`);
             if (!valEl) return;
@@ -1492,10 +1492,10 @@
                         </div>
                     `;
 
-                    // Пароль пилота: изначально скрыт (замаскирован), запрашивается из
-                    // Firebase только по клику на глазик (а не рассылается всем сразу),
-                    // и появляется кнопка копирования, когда он раскрыт.
-                    passwordDetailHtml = `
+                    // Пароль пилота: видит и раскрывает только Основатель — обычному
+                    // Админу пароли других участников не показываются (только выдача нового).
+                    if (window.isFounder()) {
+                        passwordDetailHtml = `
                         <div class="pilot-detail-item">
                             <span>ПАРОЛЬ</span>
                             <span style="display:flex; align-items:center; gap:6px;">
@@ -1505,6 +1505,7 @@
                             </span>
                         </div>
                     `;
+                    }
                 }
 
                 detailsTr.innerHTML = `
@@ -1840,20 +1841,100 @@
                 alert('Недостаточно прав для выдачи пароля!');
                 return;
             }
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-            const randomPassword = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-
             try {
+                // Обычный Админ может выдать пароль только тому, у кого его ещё нет.
+                // Переиздать/заменить существующий пароль может только Основатель.
+                if (!window.isFounder()) {
+                    const existing = await getDoc(doc(db, 'pilot_auth', cid.toString()));
+                    if (existing.exists() && existing.data().password) {
+                        alert('У этого пилота уже есть пароль. Заменить его может только Основатель.');
+                        return;
+                    }
+                }
+
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+                const randomPassword = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+
                 await setDoc(doc(db, 'pilot_auth', cid.toString()), {
                     password: randomPassword,
                     mustChange: true,
                     updatedAt: new Date().toISOString()
                 });
                 await window.logAudit('Выдача пароля', `CID ${cid} (${name || ''})`);
-                alert(`Временный пароль для ${name || 'пилота'} (CID ${cid}):\n\n${randomPassword}\n\nПередайте его пилоту лично — при следующем входе система попросит его сменить на свой собственный.`);
+                window.showIssuedPilotPasswordPopup(name || 'пилота', cid, randomPassword);
             } catch (error) {
                 console.error('Ошибка создания пароля:', error);
                 alert('Не удалось создать пароль. Попробуйте снова.');
+            }
+        };
+
+        // Всплывающее окно с выданным паролем и рабочей кнопкой копирования
+        // (вместо alert, из которого пароль неудобно копировать на мобильных).
+        window.closeIssuedPilotPasswordPopup = function() {
+            const existing = document.getElementById('issuedPilotPwdPopup');
+            if (existing) existing.remove();
+        };
+
+        window.showIssuedPilotPasswordPopup = function(name, cid, pwd) {
+            window.closeIssuedPilotPasswordPopup();
+            const overlay = document.createElement('div');
+            overlay.className = 'modal open';
+            overlay.id = 'issuedPilotPwdPopup';
+            overlay.innerHTML = `
+                <div class="modal-content" style="max-width:420px;">
+                    <button class="close-modal-btn" onclick="window.closeIssuedPilotPasswordPopup()">&times;</button>
+                    <div class="modal-header">Пароль выдан</div>
+                    <div class="modal-body">
+                        <p style="margin:0 0 12px;">Временный пароль для <strong>${escapeHtml(name)}</strong> (CID ${escapeHtml(cid.toString())}). Передайте его лично — при входе будет предложено сменить на свой.</p>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input id="issuedPilotPwdInput" type="text" readonly value="${escapeHtml(pwd)}"
+                                style="flex:1; min-width:0; font-size:16px; letter-spacing:1px; font-weight:700; color:#fff; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:9px 10px;"
+                                onclick="this.select();">
+                            <button id="issuedPilotPwdCopyBtn" onclick="window.copyIssuedPilotPwd('${pwd.replace(/'/g, "\\'")}')"
+                                style="background:rgba(46,204,113,0.15); color:#2ecc71; border:1px solid rgba(46,204,113,0.3); border-radius:8px; padding:9px 12px; font-weight:600; font-size:12px; cursor:pointer; white-space:nowrap;">📋 Копировать</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) window.closeIssuedPilotPasswordPopup(); });
+            const input = document.getElementById('issuedPilotPwdInput');
+            if (input) { input.focus(); input.select(); }
+        };
+
+        window.copyIssuedPilotPwd = function(pwd) {
+            const btn = document.getElementById('issuedPilotPwdCopyBtn');
+            const flashCopied = () => {
+                if (!btn) return;
+                const original = btn.textContent;
+                btn.textContent = '✅ Скопировано';
+                setTimeout(() => { btn.textContent = original; }, 1200);
+            };
+            const fallback = () => {
+                const input = document.getElementById('issuedPilotPwdInput');
+                try {
+                    if (input) {
+                        input.select();
+                        input.setSelectionRange(0, pwd.length);
+                        document.execCommand('copy');
+                        flashCopied();
+                    } else {
+                        const temp = document.createElement('textarea');
+                        temp.value = pwd;
+                        temp.style.position = 'fixed';
+                        temp.style.opacity = '0';
+                        document.body.appendChild(temp);
+                        temp.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(temp);
+                        flashCopied();
+                    }
+                } catch (e) { console.error('Не удалось скопировать пароль:', e); }
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(pwd).then(flashCopied).catch(fallback);
+            } else {
+                fallback();
             }
         };
 
