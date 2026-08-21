@@ -343,33 +343,26 @@
         // messenger_blocks/{cid}: { blockAt: ISO-время, setBy, setAt }
         // Блокировка вступает в силу не сразу, а через 10 секунд после нажатия —
         // это время хранится в blockAt, а реальный статус (ещё "в ожидании" или уже
-        // "активна") вычисляется на лету сравнением blockAt с текущим временем
-        // (см. window.getMessengerBlockStatus), поскольку сайт статический и не
-        // имеет сервера/крона, который мог бы сработать ровно через 10 секунд.
-        window.messengerBlocksMap = {};
-        function listenToMessengerBlocks() {
-            onSnapshot(collection(db, 'messenger_blocks'), (snapshot) => {
-                const map = {};
-                snapshot.forEach((docSnap) => {
-                    map[docSnap.id] = docSnap.data();
-                });
-                window.messengerBlocksMap = map;
-                if (window.lastVatsimData) renderRoster(window.lastVatsimData);
-                else renderRoster({ pilots: [], controllers: [] });
-            });
-        }
-
-        // Возвращает текущий статус блокировки мессенджера для CID:
-        // { none: true } — блокировки нет;
-        // { pending: true, blockAt, msLeft } — блокировка назначена, но 10 секунд ещё не прошли;
-        // { active: true, blockAt } — блокировка уже вступила в силу.
-        window.getMessengerBlockStatus = function(cid) {
-            const info = window.messengerBlocksMap ? window.messengerBlocksMap[cid.toString()] : null;
-            if (!info || !info.blockAt) return { none: true };
-            const blockAtMs = new Date(info.blockAt).getTime();
-            const msLeft = blockAtMs - Date.now();
-            if (msLeft <= 0) return { active: true, blockAt: info.blockAt, info };
-            return { pending: true, blockAt: info.blockAt, msLeft, info };
+        // "активна") вычисляется на лету сравнением blockAt с текущим временем.
+        // ВАЖНО: раньше здесь была живая подписка на ВСЮ коллекцию messenger_blocks,
+        // висевшая для каждого посетителя кабинета/админки. На деле статус нужен
+        // только Основателю и только в момент открытия контекстного меню конкретного
+        // пилота (см. openPilotContextMenu) — свой собственный статус пилот и так
+        // получает в cabinet.html через отдельный точечный слушатель по своему CID.
+        // Поэтому теперь это разовый getDoc() по одному CID, без фоновой подписки.
+        window.getMessengerBlockStatus = async function(cid) {
+            try {
+                const snap = await getDoc(doc(db, 'messenger_blocks', cid.toString()));
+                const info = snap.exists() ? snap.data() : null;
+                if (!info || !info.blockAt) return { none: true };
+                const blockAtMs = new Date(info.blockAt).getTime();
+                const msLeft = blockAtMs - Date.now();
+                if (msLeft <= 0) return { active: true, blockAt: info.blockAt, info };
+                return { pending: true, blockAt: info.blockAt, msLeft, info };
+            } catch (error) {
+                console.error('Ошибка проверки блокировки мессенджера:', error);
+                return { none: true };
+            }
         };
 
         window.blockPilotMessenger = async function(cid, name) {
@@ -410,26 +403,21 @@
         // --- Блокировки чата поддержки (та же логика, отдельная коллекция) ---
         // support_blocks/{cid}: { blockAt: ISO-время, setBy, setAt }
         // Блокирует вкладку «Связь с администрацией» в личном кабинете (не мессенджер).
-        window.supportBlocksMap = {};
-        function listenToSupportBlocks() {
-            onSnapshot(collection(db, 'support_blocks'), (snapshot) => {
-                const map = {};
-                snapshot.forEach((docSnap) => {
-                    map[docSnap.id] = docSnap.data();
-                });
-                window.supportBlocksMap = map;
-                if (window.lastVatsimData) renderRoster(window.lastVatsimData);
-                else renderRoster({ pilots: [], controllers: [] });
-            });
-        }
-
-        window.getSupportBlockStatus = function(cid) {
-            const info = window.supportBlocksMap ? window.supportBlocksMap[cid.toString()] : null;
-            if (!info || !info.blockAt) return { none: true };
-            const blockAtMs = new Date(info.blockAt).getTime();
-            const msLeft = blockAtMs - Date.now();
-            if (msLeft <= 0) return { active: true, blockAt: info.blockAt, info };
-            return { pending: true, blockAt: info.blockAt, msLeft, info };
+        // Та же оптимизация: разовый getDoc() по CID вместо живой подписки на всю
+        // коллекцию (см. комментарий выше про messenger_blocks).
+        window.getSupportBlockStatus = async function(cid) {
+            try {
+                const snap = await getDoc(doc(db, 'support_blocks', cid.toString()));
+                const info = snap.exists() ? snap.data() : null;
+                if (!info || !info.blockAt) return { none: true };
+                const blockAtMs = new Date(info.blockAt).getTime();
+                const msLeft = blockAtMs - Date.now();
+                if (msLeft <= 0) return { active: true, blockAt: info.blockAt, info };
+                return { pending: true, blockAt: info.blockAt, msLeft, info };
+            } catch (error) {
+                console.error('Ошибка проверки блокировки поддержки:', error);
+                return { none: true };
+            }
         };
 
         window.blockPilotSupport = async function(cid, name) {
@@ -1178,13 +1166,25 @@
         };
 
         // ================= ОСТАЛЬНОЙ КОД (VATSIM, РОСТЕР И ИСТОРИЯ) =================
+        // ВАЖНО: раньше эта функция вызывалась заново на каждом тике setInterval
+        // (каждые 60 секунд, в КАЖДОЙ открытой вкладке у КАЖДОГО посетителя) и
+        // каждый раз делала отдельный getDoc() — то есть отдельное чтение Firestore.
+        // Это был один из главных источников роста числа чтений: 720 тиков за 12 часов
+        // × количество одновременно открытых вкладок сайта.
+        // Теперь документ читается один раз, а дальше держится "живым" через onSnapshot —
+        // повторные вызовы этой функции ничего не читают повторно (ранний выход по флагу).
+        let unsubFlightsCache = null;
         async function loadFlightsFromFirebase() {
+            if (unsubFlightsCache) return; // уже подписаны — кэш обновляется сам
             try {
                 const docRef = doc(db, 'vatsim_history', 'roster');
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     window.firebaseFlightsCache = docSnap.data() || {};
                 }
+                unsubFlightsCache = onSnapshot(docRef, (snap) => {
+                    window.firebaseFlightsCache = snap.exists() ? (snap.data() || {}) : {};
+                });
                 // Последние полёты больше не читаются здесь — за это отвечает
                 // listenToRecentFlights() (живой слушатель подколлекции recent_flights).
             } catch (error) {
@@ -1756,7 +1756,7 @@
             if (existing) existing.remove();
         };
 
-        window.openPilotContextMenu = function(event, cid, name) {
+        window.openPilotContextMenu = async function(event, cid, name) {
             event.preventDefault();
             window.closePilotContextMenu();
 
@@ -1781,8 +1781,13 @@
             // Блокировка мессенджера и поддержки — доступны только Основателю (owner)
             // и не применяются к самому Основателю. Каждый пункт меняется в
             // зависимости от текущего статуса: нет блокировки / ожидает (10 сек) / уже активна.
+            // Статусы теперь запрашиваются точечно (по одному CID) именно в момент
+            // открытия меню, а не через постоянную живую подписку на всю коллекцию.
             if (window.isFounder() && !isTargetFounder) {
-                const blockStatus = window.getMessengerBlockStatus(cid);
+                const [blockStatus, supportStatus] = await Promise.all([
+                    window.getMessengerBlockStatus(cid),
+                    window.getSupportBlockStatus(cid)
+                ]);
                 if (blockStatus.active) {
                     itemsHtml += `<div class="pilot-context-item" onclick="window.closePilotContextMenu(); window.unblockPilotMessenger('${cid}');">✅ Разблокировать мессенджер</div>`;
                 } else if (blockStatus.pending) {
@@ -1794,7 +1799,6 @@
 
                 // Отдельная кнопка — блокировка чата поддержки («Связь с администрацией»),
                 // работает независимо от блокировки мессенджера.
-                const supportStatus = window.getSupportBlockStatus(cid);
                 if (supportStatus.active) {
                     itemsHtml += `<div class="pilot-context-item" onclick="window.closePilotContextMenu(); window.unblockPilotSupport('${cid}');">✅ Разблокировать поддержку</div>`;
                 } else if (supportStatus.pending) {
@@ -2544,24 +2548,64 @@
             await validatePilotSession();
             await restoreAdminSession(); 
 
-            listenToEvents(); 
-            listenToLiveries();
-            listenToPilots(); 
-            listenToAdmins(); 
-            listenToPilotDiscord();
-            listenToMessengerBlocks();
-            listenToSupportBlocks();
-            listenToRecentFlights();
-            
+            // ВАЖНО: раньше ВСЕ 8 живых слушателей Firestore (events, liveries,
+            // custom_pilots, admins, pilot_discord, messenger_blocks, support_blocks,
+            // recent_flights) + опрос VATSIM/Firebase каждые 60 сек запускались в
+            // initApp() одинаково на КАЖДОЙ странице сайта — включая index.html,
+            // about.html, faq.html и join.html, где эти данные вообще нигде не
+            // отображаются (на этих страницах нет ни одного связанного элемента
+            // в DOM). Каждый переход по сайту и каждый визит заново открывал все
+            // подписки и заново читал коллекции — это и есть главная причина
+            // резкого роста числа чтений. Теперь каждая страница подписывается
+            // только на то, что ей реально нужно (определяем по наличию элементов
+            // в DOM, которые эти данные используют).
+            const needsRoster = !!(document.getElementById('roster-tbody') || document.getElementById('cabApp') || document.getElementById('dashApp'));
+            const needsEvents = !!(document.getElementById('eventCarouselContainer') || document.getElementById('dashApp'));
+            const needsFleet = !!(document.getElementById('liveriesGrid') || document.getElementById('dashApp'));
+            // adminsMap/discordMap используются и на публичном roster.html (метки роли и
+            // discord-теги видны только вошедшим админам/основателю) — поэтому включаем
+            // их не только на dashApp, но и когда текущая сессия уже подтверждена как админская.
+            const isCurrentlyAdmin = !!(window.isAdmin && window.isAdmin());
+            const needsAdminData = !!document.getElementById('dashApp') || (needsRoster && isCurrentlyAdmin);
+
+            if (needsEvents) listenToEvents();
+            if (needsFleet) listenToLiveries();
+            if (needsRoster) {
+                listenToPilots();
+                listenToRecentFlights();
+            }
+            if (needsAdminData) {
+                listenToAdmins();
+                listenToPilotDiscord();
+            }
+            // Блокировки мессенджера/поддержки больше не требуют отдельной подписки
+            // здесь вообще: свой статус пилот получает в cabinet.html через точечный
+            // слушатель по своему CID, а Основателю в контекстном меню статус
+            // конкретного пилота подгружается по требованию (см. openPilotContextMenu).
+
             renderRoster({ pilots: [], controllers: [] }); 
             window.updateProfileWidget(); 
-            
-            await loadFlightsFromFirebase();
-            await fetchVatsimData();
+
+            // Опрос VATSIM (внешний бесплатный API, не Firebase) + чтение/запись
+            // vatsim_history/roster тоже нужны только там, где реально показывается
+            // статус "в сети сейчас" — на статичных страницах это лишняя нагрузка.
+            if (needsRoster) {
+                await loadFlightsFromFirebase();
+                await fetchVatsimData();
+                setInterval(() => {
+                    // Не дёргаем API/Firestore, пока вкладка свёрнута/неактивна —
+                    // раньше это продолжалось даже в фоновых вкладках часами.
+                    if (document.hidden) return;
+                    fetchVatsimData();
+                }, 60000);
+                // При возврате на вкладку не ждём следующего 60-секундного тика —
+                // обновляем статус "в сети сейчас" сразу же.
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) fetchVatsimData();
+                });
+            }
 
             window._checkPendingHighlight();
-
-            setInterval(fetchVatsimData, 60000); 
         }
 
         initApp();
