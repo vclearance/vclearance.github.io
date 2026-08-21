@@ -1,4 +1,4 @@
----
+q---
 layout: none
 ---
 <!DOCTYPE html>
@@ -152,6 +152,7 @@ layout: none
                 <div class="side-tab" data-tab="members" data-role-restricted="1" onclick="switchTab('members')">👥 Участники</div>
                 <div class="side-tab" data-tab="chat" data-role-restricted="1" onclick="switchTab('chat')">💬 Чат <span class="badge" id="chatBadge">•</span></div>
                 <div class="side-tab" data-tab="audit" data-role-restricted="1" onclick="switchTab('audit')">🧾 Аудит</div>
+                <div class="side-tab" data-tab="events" data-role-restricted="1" onclick="switchTab('events')">📅 Ивенты</div>
                 <div class="side-tab" data-tab="liveries" onclick="switchTab('liveries')">🎨 Ливреи</div>
 
                 <div class="spacer"></div>
@@ -246,6 +247,19 @@ layout: none
                     </div>
                 </div>
 
+                <!-- ===== Ивенты ===== -->
+                <div class="pane" id="pane-events">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px;">
+                        <div class="pane-title" style="margin-bottom:0;">Ивенты</div>
+                        <button onclick="openAddEventModal()" style="background:#2ecc71; color:#fff; font-size:12px; padding:9px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:600;">+ Добавить ивент</button>
+                    </div>
+                    <div class="card" style="padding:0;">
+                        <div id="eventsListBody" style="max-height:600px; overflow-y:auto;">
+                            <div style="text-align:center; color:#666; padding:18px; font-size:12px;">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- ===== Ливреи ===== -->
                 <div class="pane" id="pane-liveries">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px;">
@@ -289,6 +303,35 @@ layout: none
         </div>
     </div>
 
+    <!-- ===== Модалка добавления/редактирования ивента ===== -->
+    <div class="modal" id="addEventModal">
+        <div class="modal-content" style="max-width:550px;">
+            <button class="close-modal-btn" onclick="closeEventModal()">&times;</button>
+            <div class="modal-header" id="eventModalHeader">Создать мероприятие</div>
+            <div class="modal-body">
+                <div class="profile-login-form">
+                    <label style="font-size:11px; text-transform:uppercase; color:#888;">Дата и время:</label>
+                    <input type="datetime-local" id="eventDate" style="color:#fff; color-scheme:dark;">
+
+                    <label style="font-size:11px; text-transform:uppercase; color:#888; margin-top:8px;">Обложка (ссылка на картинку 16:9):</label>
+                    <input type="text" id="eventImg" placeholder="https://i.imgur.com/...">
+
+                    <label style="font-size:11px; text-transform:uppercase; color:#888; margin-top:8px;">Заголовок:</label>
+                    <input type="text" id="eventTitle" placeholder="Заголовок ивента">
+
+                    <label style="font-size:11px; text-transform:uppercase; color:#888; margin-top:8px;">Маршрут:</label>
+                    <input type="text" id="eventRoute" placeholder="Маршрут рейса (например, UUEE — URSS)">
+
+                    <label style="font-size:11px; text-transform:uppercase; color:#888; margin-top:8px;">Описание:</label>
+                    <textarea id="eventDesc" placeholder="Полное описание и регламент проведения мероприятия..." style="min-height:120px; font-family:inherit; resize:vertical; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px 12px; border-radius:6px; font-size:13px; outline:none; width:100%;"></textarea>
+
+                    <button onclick="submitEvent()" id="eventSubmitBtn" style="background:#2ecc71; color:white; margin-top:14px;">Опубликовать ивент</button>
+                    <div id="eventFormError" style="color:#ff4d4d; font-size:12px; margin-top:5px; display:none; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
@@ -316,6 +359,8 @@ let currentRole = null;    // 'founder' | 'admin' | 'liverymaker'
 let currentCid = null;
 let allLiveries = [];
 let editingLiveryId = null;
+let allEvents = [];
+let editingEventId = null;
 let currentAuditDocs = null;
 let unsubAuditLogs = null;
 let showSystemLogs = false;
@@ -438,6 +483,7 @@ function initData() {
 
     listenChatThreads();
     listenToAuditLogs();
+    listenToEvents();
 }
 
 /* ---------------- ЖУРНАЛ АУДИТА (доступно Основателю и Админам, не Ливери-мейкеру) ---------------- */
@@ -671,6 +717,132 @@ window.deleteLivery = async function(id) {
             await logAudit('Удаление ливреи', `${liv.title} (${liv.aircraft})`);
         } catch (error) {
             console.error('Ошибка удаления ливреи:', error);
+            alert('Произошла ошибка при удалении.');
+        }
+    }
+};
+
+/* ---------------- ИВЕНТЫ (доступно Основателю и Админам) ---------------- */
+function listenToEvents() {
+    onSnapshot(collection(db, 'events'), snap => {
+        const events = [];
+        snap.forEach(d => events.push({ id: d.id, ...d.data() }));
+        events.sort((a, b) => new Date(a.date) - new Date(b.date));
+        allEvents = events;
+        renderEventsTab();
+    }, e => console.error('Ошибка чтения ивентов:', e));
+}
+
+function renderEventsTab() {
+    const list = document.getElementById('eventsListBody');
+    if (!list) return;
+
+    if (allEvents.length === 0) {
+        list.innerHTML = `<div style="text-align:center; color:#666; padding:18px; font-size:12px;">Ивенты пока не добавлены.</div>`;
+        return;
+    }
+
+    const now = new Date();
+    list.innerHTML = allEvents.map(ev => {
+        const dateObj = new Date(ev.date);
+        const dateStr = dateObj.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+        const pastTag = dateObj < now ? ' <span style="color:#888; font-weight:700;">[прошёл]</span>' : '';
+        return `
+            <div class="livery-admin-row">
+                <span class="livery-admin-name">${escapeHtml(ev.title)} <span>(${escapeHtml(ev.route || '')})</span> · <span style="color:#666;">${dateStr}</span>${pastTag}</span>
+                <div class="livery-admin-actions">
+                    <button class="livery-admin-btn edit" title="Изменить" onclick="openEditEventModal('${ev.id}')">✏️</button>
+                    <button class="livery-admin-btn del" title="Удалить" onclick="deleteEvent('${ev.id}')">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function resetEventForm() {
+    document.getElementById('eventDate').value = '';
+    document.getElementById('eventImg').value = '';
+    document.getElementById('eventTitle').value = '';
+    document.getElementById('eventRoute').value = '';
+    document.getElementById('eventDesc').value = '';
+    const errDiv = document.getElementById('eventFormError');
+    if (errDiv) errDiv.style.display = 'none';
+}
+
+window.openAddEventModal = function() {
+    editingEventId = null;
+    resetEventForm();
+    document.getElementById('eventModalHeader').textContent = 'Создать мероприятие';
+    document.getElementById('eventSubmitBtn').textContent = 'Опубликовать ивент';
+    document.getElementById('addEventModal').classList.add('open');
+};
+
+window.openEditEventModal = function(id) {
+    const ev = allEvents.find(e => e.id === id);
+    if (!ev) return;
+
+    editingEventId = id;
+    // Дата хранится как локальное значение datetime-local + 'Z' — убираем 'Z' обратно для инпута.
+    document.getElementById('eventDate').value = (ev.date || '').replace(/Z$/, '').slice(0, 16);
+    document.getElementById('eventImg').value = ev.img || '';
+    document.getElementById('eventTitle').value = ev.title || '';
+    document.getElementById('eventRoute').value = ev.route || '';
+    document.getElementById('eventDesc').value = ev.desc || '';
+    const errDiv = document.getElementById('eventFormError');
+    if (errDiv) errDiv.style.display = 'none';
+
+    document.getElementById('eventModalHeader').textContent = 'Изменить мероприятие';
+    document.getElementById('eventSubmitBtn').textContent = 'Сохранить изменения';
+    document.getElementById('addEventModal').classList.add('open');
+};
+
+window.closeEventModal = function() {
+    document.getElementById('addEventModal').classList.remove('open');
+    editingEventId = null;
+};
+
+window.submitEvent = async function() {
+    const dateVal = document.getElementById('eventDate').value;
+    const img = document.getElementById('eventImg').value.trim();
+    const title = document.getElementById('eventTitle').value.trim();
+    const route = document.getElementById('eventRoute').value.trim();
+    const desc = document.getElementById('eventDesc').value.trim();
+    const errDiv = document.getElementById('eventFormError');
+
+    if (!dateVal || !title || !route || !desc) {
+        if (errDiv) { errDiv.textContent = 'Поля Дата, Заголовок, Маршрут и Описание обязательны к заполнению!'; errDiv.style.display = 'block'; }
+        return;
+    }
+
+    const date = dateVal + 'Z';
+    const eventData = { date, img, title, route, desc };
+
+    try {
+        if (editingEventId) {
+            await setDoc(doc(db, 'events', editingEventId), eventData, { merge: true });
+            await logAudit('Изменение ивента', `Название: "${title}", Маршрут: ${route}`);
+        } else {
+            eventData.addedAt = new Date().toISOString();
+            await addDoc(collection(db, 'events'), eventData);
+            await logAudit('Добавление ивента', `Название: "${title}", Маршрут: ${route}`);
+        }
+        window.closeEventModal();
+    } catch (error) {
+        console.error('Ошибка сохранения ивента:', error);
+        if (errDiv) { errDiv.textContent = 'Произошла ошибка при сохранении. Попробуйте снова.'; errDiv.style.display = 'block'; }
+    }
+};
+
+window.deleteEvent = async function(id) {
+    const ev = allEvents.find(e => e.id === id);
+    if (!ev) return;
+
+    if (confirm(`Удалить ивент "${ev.title}"?`)) {
+        try {
+            await deleteDoc(doc(db, 'events', id));
+            await logAudit('Удаление ивента', `Название: "${ev.title}"`);
+        } catch (error) {
+            console.error('Ошибка удаления ивента:', error);
             alert('Произошла ошибка при удалении.');
         }
     }
