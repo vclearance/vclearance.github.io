@@ -293,7 +293,7 @@ layout: none
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
     getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, getDocs, collection, onSnapshot,
-    query, orderBy, limit
+    query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -455,7 +455,7 @@ async function logAudit(action, details) {
 
 function listenToAuditLogs() {
     if (unsubAuditLogs) return; // уже подписаны — не плодим повторные слушатели
-    const q = query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'), limit(300));
+    const q = query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'));
     unsubAuditLogs = onSnapshot(q, snap => {
         currentAuditDocs = snap;
         renderAuditLogs();
