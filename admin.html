@@ -151,6 +151,7 @@ layout: none
                 <div class="side-tab active" data-tab="analytics" data-role-restricted="1" onclick="switchTab('analytics')">📊 Аналитика</div>
                 <div class="side-tab" data-tab="members" data-role-restricted="1" onclick="switchTab('members')">👥 Участники</div>
                 <div class="side-tab" data-tab="chat" data-role-restricted="1" onclick="switchTab('chat')">💬 Чат <span class="badge" id="chatBadge">•</span></div>
+                <div class="side-tab" data-tab="audit" data-role-restricted="1" onclick="switchTab('audit')">🧾 Аудит</div>
                 <div class="side-tab" data-tab="liveries" onclick="switchTab('liveries')">🎨 Ливреи</div>
 
                 <div class="spacer"></div>
@@ -224,6 +225,27 @@ layout: none
                     </div>
                 </div>
 
+                <!-- ===== Аудит ===== -->
+                <div class="pane" id="pane-audit">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px;">
+                        <div class="pane-title" style="margin-bottom:0;">Журнал аудита</div>
+                        <label style="font-size:11px; color:#aaa; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                            <input type="checkbox" id="toggleSystemLogs" onchange="toggleSystemLogs(this.checked)" style="width:auto; margin:0; cursor:pointer;">
+                            Показать системные сообщения
+                        </label>
+                    </div>
+                    <div class="card" style="padding:0;">
+                        <div class="scroll-area" style="max-height:600px;">
+                            <table class="roster-table" style="font-size:12px;">
+                                <thead><tr><th>Дата</th><th>Админ (CID)</th><th>Действие</th></tr></thead>
+                                <tbody id="audit-tbody">
+                                    <tr><td colspan="3" style="text-align:center; color:#666; padding:18px;">Загрузка данных...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- ===== Ливреи ===== -->
                 <div class="pane" id="pane-liveries">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px;">
@@ -271,7 +293,7 @@ layout: none
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
     getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, getDocs, collection, onSnapshot,
-    query, orderBy
+    query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -294,6 +316,9 @@ let currentRole = null;    // 'founder' | 'admin' | 'liverymaker'
 let currentCid = null;
 let allLiveries = [];
 let editingLiveryId = null;
+let currentAuditDocs = null;
+let unsubAuditLogs = null;
+let showSystemLogs = false;
 
 function roleLabelRu(role) {
     if (role === 'founder') return 'Основатель';
@@ -412,7 +437,93 @@ function initData() {
     });
 
     listenChatThreads();
+    listenToAuditLogs();
 }
+
+/* ---------------- ЖУРНАЛ АУДИТА (доступно Основателю и Админам, не Ливери-мейкеру) ---------------- */
+async function logAudit(action, details) {
+    if (!currentCid) return;
+    try {
+        await addDoc(collection(db, 'audit_logs'), {
+            timestamp: new Date().toISOString(),
+            adminCid: currentCid,
+            action: action,
+            details: details
+        });
+    } catch (e) { console.error('Ошибка записи в аудит:', e); }
+}
+
+function listenToAuditLogs() {
+    if (unsubAuditLogs) return; // уже подписаны — не плодим повторные слушатели
+    const q = query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'), limit(300));
+    unsubAuditLogs = onSnapshot(q, snap => {
+        currentAuditDocs = snap;
+        renderAuditLogs();
+    }, e => console.error('Ошибка чтения журнала аудита:', e));
+}
+
+function stopListeningToAuditLogs() {
+    if (unsubAuditLogs) { unsubAuditLogs(); unsubAuditLogs = null; }
+    currentAuditDocs = null;
+}
+
+window.toggleSystemLogs = function(isChecked) {
+    showSystemLogs = isChecked;
+    renderAuditLogs();
+};
+
+function renderAuditLogs() {
+    const tbody = document.getElementById('audit-tbody');
+    if (!tbody || !currentAuditDocs) return;
+
+    if (currentAuditDocs.empty) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#666; padding:18px;">Журнал пуст</td></tr>`;
+        return;
+    }
+
+    let rows = '';
+    let renderedCount = 0;
+
+    currentAuditDocs.forEach(docSnap => {
+        const data = docSnap.data();
+
+        // Пропускаем системные сообщения, если галочка не стоит
+        const isSystemLog = data.adminCid === 'Система (Бот)';
+        if (isSystemLog && !showSystemLogs) return;
+
+        const logId = docSnap.id;
+        const dateStr = new Date(data.timestamp).toLocaleString('ru-RU', {
+            day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit'
+        });
+
+        // Удалять записи из журнала аудита может только Основатель.
+        const deleteBtnHtml = currentRole === 'founder'
+            ? `<button onclick="deleteAuditLog('${logId}')" style="background:rgba(231,76,60,0.15); color:#e74c3c; border:1px solid rgba(231,76,60,0.3); padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer; margin-left:8px;" title="Удалить лог">Удалить</button>`
+            : '';
+
+        const adminDisplay = isSystemLog
+            ? `<strong style="color:#3498db;">${escapeHtml(data.adminCid)}</strong>`
+            : `<strong style="color:#2ecc71;">${escapeHtml(data.adminCid)}</strong>`;
+
+        rows += `
+            <tr>
+                <td style="color:#aaa;">${dateStr}</td>
+                <td>${adminDisplay}</td>
+                <td>${escapeHtml(data.action)}: <span style="color:#ccc;">${escapeHtml(data.details)}</span>${deleteBtnHtml}</td>
+            </tr>
+        `;
+        renderedCount++;
+    });
+
+    tbody.innerHTML = rows || `<tr><td colspan="3" style="text-align:center; color:#666; padding:18px;">Нет записей для отображения</td></tr>`;
+}
+
+window.deleteAuditLog = async function(logId) {
+    if (currentRole !== 'founder') { alert('Удаление логов доступно только Основателю!'); return; }
+    if (!confirm('Вы уверены, что хотите удалить эту запись из логов?')) return;
+    try { await deleteDoc(doc(db, 'audit_logs', logId)); }
+    catch (e) { console.error('Ошибка при удалении лога:', e); alert('Не удалось удалить запись из логов.'); }
+};
 
 /* ---------------- ЛИВРЕИ (доступно Основателю, Админам и Ливери-мейкерам) ---------------- */
 function listenToLiveries() {
@@ -537,9 +648,11 @@ window.submitLivery = async function() {
     try {
         if (editingLiveryId) {
             await setDoc(doc(db, 'liveries', editingLiveryId), liveryData, { merge: true });
+            await logAudit('Изменение ливреи', `${title} (${aircraft})`);
         } else {
             liveryData.addedAt = new Date().toISOString();
             await addDoc(collection(db, 'liveries'), liveryData);
+            await logAudit('Добавление ливреи', `${title} (${aircraft})`);
         }
         window.closeLiveryModal();
     } catch (error) {
@@ -555,6 +668,7 @@ window.deleteLivery = async function(id) {
     if (confirm(`Удалить ливрею "${liv.title}" (${liv.aircraft})?`)) {
         try {
             await deleteDoc(doc(db, 'liveries', id));
+            await logAudit('Удаление ливреи', `${liv.title} (${liv.aircraft})`);
         } catch (error) {
             console.error('Ошибка удаления ливреи:', error);
             alert('Произошла ошибка при удалении.');
@@ -615,12 +729,16 @@ window.addParticipant = async function() {
         await setDoc(doc(db, 'custom_pilots', cid), { cid, name });
         document.getElementById('newCid').value = '';
         document.getElementById('newName').value = '';
+        await logAudit('Добавление пилота', `Имя: ${name}, CID: ${cid}`);
     } catch (e) { console.error(e); alert('Не удалось добавить пилота.'); }
 };
 
 window.deleteParticipant = async function(cid, name) {
     if (!confirm(`Удалить ${name} (${cid}) из ростера?`)) return;
-    try { await deleteDoc(doc(db, 'custom_pilots', cid)); }
+    try {
+        await deleteDoc(doc(db, 'custom_pilots', cid));
+        await logAudit('Удаление пилота', `Удален CID: ${cid} (${name})`);
+    }
     catch (e) { console.error(e); alert('Ошибка удаления.'); }
 };
 
@@ -642,6 +760,7 @@ window.generatePassword = async function(cid, name) {
         const pwd = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
         await setDoc(doc(db, 'pilot_auth', cidStr), { password: pwd, mustChange: true, updatedAt: new Date().toISOString() });
         showIssuedPasswordPopup(name, cidStr, pwd);
+        await logAudit('Выдача пароля', `CID ${cidStr} (${name})`);
     } catch (e) { console.error(e); alert('Не удалось создать пароль.'); }
 };
 
@@ -738,9 +857,11 @@ window.toggleAdmin = async function(cid, name, makeAdmin) {
             const pwd = prompt(`Пароль для нового ${roleName} ${name} (CID ${cid}):`);
             if (!pwd || pwd.trim().length < 6) { if (pwd !== null) alert('Пароль должен быть не короче 6 символов.'); return; }
             await setDoc(doc(db, 'admins', cid), { password: pwd.trim(), role: role, addedBy: currentCid });
+            await logAudit('Назначение администратора', `Новый ${roleName} CID: ${cid} (${name})`);
         } else {
             if (!confirm(`Убрать права администратора у ${name}?`)) return;
             await deleteDoc(doc(db, 'admins', cid));
+            await logAudit('Снятие администратора', `CID: ${cid} (${name})`);
         }
     } catch (e) { console.error(e); alert('Ошибка изменения прав.'); }
 };
@@ -938,7 +1059,10 @@ window.closeChatContextMenuPublic = closeChatContextMenu;
 window.deleteMessage = async function(threadCid, msgId) {
     if (currentRole !== 'founder') { alert('Только Основатель может удалять сообщения!'); return; }
     if (!confirm('Удалить это сообщение?')) return;
-    try { await deleteDoc(doc(db, 'chat_threads', threadCid, 'messages', msgId)); }
+    try {
+        await deleteDoc(doc(db, 'chat_threads', threadCid, 'messages', msgId));
+        await logAudit('Удаление сообщения', `CID: ${threadCid}`);
+    }
     catch (e) { console.error(e); alert('Ошибка удаления сообщения.'); }
 };
 
@@ -955,6 +1079,7 @@ window.deleteThread = async function(cid) {
         const msgsSnap = await getDocs(collection(db, 'chat_threads', cid, 'messages'));
         await Promise.all(msgsSnap.docs.map(d => deleteDoc(d.ref)));
         await deleteDoc(doc(db, 'chat_threads', cid));
+        await logAudit('Удаление чата', `CID: ${cid} (${t ? t.name : cid})`);
         if (activeThreadCid === cid) {
             activeThreadCid = null;
             document.getElementById('chatConvBox').innerHTML = `<div class="chat-empty">Выберите переписку слева</div>`;
