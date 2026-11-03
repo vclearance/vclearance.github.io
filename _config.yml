@@ -1,0 +1,13 @@
+title: vClearance Virtual Airline
+description: "vClearance — виртуальная авиакомпания сообщества VATSIM."
+lang: ru
+
+# Отключаем автогенерацию markdown-контента, которая нам не нужна —
+# сайт полностью на статичном HTML со своими стилями.
+markdown: kramdown
+plugins: []
+
+exclude:
+  - tracker.js
+  - package.json
+  - README.md

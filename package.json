@@ -1,0 +1,13 @@
+{
+  "name": "vclearance-tracker",
+  "version": "1.0.0",
+  "description": "VATSIM Background Tracker",
+  "main": "tracker.js",
+  "type": "module",
+  "scripts": {
+    "start": "node tracker.js"
+  },
+  "dependencies": {
+    "firebase": "^10.8.0"
+  }
+}

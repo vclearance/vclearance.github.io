@@ -1,0 +1,1487 @@
+---
+layout: none
+---
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Личный кабинет | vClearance</title>
+<link rel="icon" href="https://i.imgur.com/cXXk9hl.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+<style>
+    body { background:var(--bg); min-height:100vh; }
+
+    /* ---------------- ВЕРХНЯЯ ПОЛОСА ---------------- */
+    .cab-top { height:var(--header-h); padding:0 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); background:var(--bg); }
+    .cab-top .brand { display:flex; align-items:center; gap:14px; }
+    .cab-top .brand img { height:28px; width:auto; display:block; }
+    .cab-top .brand span { font-family:var(--cond); font-size:17px; font-weight:600; color:var(--text); padding-left:14px; border-left:1px solid var(--line-2); }
+    .cab-top a.back { height:32px; display:inline-flex; align-items:center; padding:0 12px; border:1px solid var(--line-2); font-size:13px; color:var(--text-2); text-decoration:none; }
+    .cab-top a.back:hover { color:var(--text); border-color:var(--text-3); }
+
+    /* ---------------- ВХОД ---------------- */
+    #loginGate { min-height:calc(100vh - var(--header-h)); display:flex; align-items:center; justify-content:center; padding:20px; }
+    #loginGate .gate-box { width:100%; max-width:380px; background:var(--panel); border:1px solid var(--line-2); border-top:2px solid var(--green); padding:28px 28px 30px; }
+    #loginGate h1 { font-family:var(--cond); font-size:26px; font-weight:600; color:var(--text); margin-bottom:4px; }
+    #loginGate p.sub { font-size:13px; color:var(--text-3); margin-bottom:22px; }
+
+    #cabApp { display:none; }
+    .cab-shell { max-width:1240px; margin:0 auto; padding:32px 32px 64px; display:grid; grid-template-columns:220px minmax(0,1fr); gap:32px; align-items:start; }
+
+    /* ---------------- БОКОВОЕ МЕНЮ ---------------- */
+    .cab-sidenav { display:flex; flex-direction:column; border:1px solid var(--line); position:sticky; top:24px; }
+    .cab-navitem {
+        display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+        background:transparent; border:none; border-bottom:1px solid var(--line); border-left:2px solid transparent;
+        color:var(--text-3); font-size:14px; font-weight:500; padding:13px 16px; transition:color .15s, background .15s;
+    }
+    .cab-navitem:last-child { border-bottom:none; }
+    .cab-navitem:hover { color:var(--text); background:var(--panel); }
+    .cab-navitem.active { color:var(--text); background:var(--panel); border-left-color:var(--green); }
+    .cab-navicon { display:none; }
+    .nav-dot { width:8px; height:8px; background:var(--red); margin-left:auto; display:none; flex:0 0 auto; }
+    .nav-dot.show { display:block; }
+
+    .cab-content { min-width:0; }
+
+    /* ---------------- ГЛАВНАЯ ---------------- */
+    .cab-header { display:flex; align-items:center; gap:16px; padding-bottom:24px; margin-bottom:24px; border-bottom:1px solid var(--line); }
+    .cab-avatar { width:56px; height:56px; background:var(--green-dim); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-weight:600; font-size:20px; color:#eafff0; flex:0 0 auto; overflow:hidden; }
+    .cab-header h2 { font-family:var(--cond); font-size:28px; font-weight:600; line-height:1.1; color:var(--text); }
+    .cab-header .cid-tag { font-family:var(--mono); font-size:12px; color:var(--text-3); margin-top:2px; }
+    .logout-link { margin-left:auto; height:32px; display:inline-flex; align-items:center; padding:0 12px; border:1px solid var(--red-line); font-size:13px; font-weight:500; color:var(--red); cursor:pointer; }
+    .logout-link:hover { background:var(--red-bg); }
+
+    .stat-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); margin-bottom:24px; }
+    .stat-box { background:var(--bg); padding:16px 18px; }
+    .stat-box h4 { font-size:12px; font-weight:500; color:var(--text-3); margin-bottom:6px; }
+    .stat-box .num { font-family:var(--mono); font-size:30px; font-weight:500; line-height:1.15; color:var(--green); }
+    .stat-box .num.num-sm { font-size:16px; padding-top:8px; color:var(--text); }
+
+    .card { background:var(--bg); border:1px solid var(--line); padding:0; margin-bottom:24px; }
+    .card h3 { font-family:var(--cond); font-size:17px; font-weight:600; color:var(--text); padding:12px 16px; margin:0; border-bottom:1px solid var(--line); background:var(--panel-2); }
+    .card > :not(h3) { margin:0; }
+    .card-pad { padding:16px; }
+    .card-scroll { max-height:300px; overflow-y:auto; }
+    .card .roster-table { min-width:100%; }
+
+    /* Бот / чат поддержки */
+    .bot-actions { display:grid; grid-template-columns:repeat(3,1fr); gap:0; margin-bottom:16px; }
+    .bot-actions button {
+        height:40px; background:transparent; border:1px solid var(--line-2); color:var(--text-2);
+        font-size:13px; font-weight:500; transition:.15s;
+    }
+    .bot-actions button + button { border-left:none; }
+    .bot-actions button:hover { background:var(--green-bg); color:var(--green); }
+    .chat-msgs { max-height:340px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:4px 0 14px; }
+    .msg { max-width:78%; padding:8px 12px; font-size:13.5px; line-height:1.5; }
+    .msg.user { align-self:flex-end; background:#163a26; color:#eafff0; border-right:2px solid var(--green); }
+    .msg.admin { align-self:flex-start; background:var(--panel-3); color:var(--text); border-left:2px solid var(--line-2); }
+    .msg .cat { display:inline-block; font-family:var(--mono); font-size:10.5px; opacity:.7; margin-bottom:3px; }
+    .msg .replier { display:block; font-size:11px; font-weight:600; color:#7fffa8; margin-bottom:3px; }
+    .msg .ts { display:block; font-family:var(--mono); font-size:10.5px; opacity:.5; margin-top:4px; }
+    .chat-empty { color:var(--text-4); font-size:13px; padding:16px 0; }
+    .chat-composer { display:none; flex-direction:column; gap:8px; margin-top:4px; }
+    .chat-composer textarea {
+        width:100%; resize:vertical; min-height:96px; max-height:260px; overflow-y:auto;
+        background:var(--bg); border:1px solid var(--line-2); color:var(--text);
+        font-size:14px; line-height:1.5; padding:10px 12px; transition:border-color .15s;
+    }
+    .chat-composer textarea::placeholder { color:var(--text-4); }
+    .chat-composer textarea:focus { outline:none; border-color:var(--green); }
+    .chat-composer button { align-self:flex-end; padding:0 18px; height:36px; background:var(--green); color:#04140a; border:none; font-weight:600; font-size:13px; }
+    .chat-composer button:hover { background:#29b866; }
+    .chat-composer .hint { font-size:11px; color:var(--text-4); }
+
+    /* ---------------- МЕССЕНДЖЕР ---------------- */
+    .dm-shell { display:flex; background:var(--bg); border:1px solid var(--line); overflow:hidden; height:min(660px, calc(100vh - 160px)); min-height:420px; }
+    .dm-list-pane { width:300px; flex:0 0 300px; border-right:1px solid var(--line); display:flex; flex-direction:column; min-width:0; position:relative; }
+    .dm-list-header { padding:12px 16px; font-family:var(--cond); font-size:17px; font-weight:600; color:var(--text); border-bottom:1px solid var(--line); background:var(--panel-2); }
+    .dm-list { flex:1; overflow-y:auto; padding-bottom:64px; }
+    .dm-list-empty { padding:24px 16px; color:var(--text-4); font-size:13px; line-height:1.6; }
+    .messenger-locked { flex:1; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; padding:32px 24px; gap:8px; border:1px solid var(--line); border-left:2px solid var(--red); background:var(--bg); }
+    .card .messenger-locked { border:none; border-left:2px solid var(--red); }
+    .messenger-locked .lock-icon { display:none; }
+    .messenger-locked .lock-title { font-family:var(--cond); font-size:18px; font-weight:600; color:var(--text); }
+    .messenger-locked .lock-sub { font-size:13px; color:var(--text-3); max-width:48ch; line-height:1.6; }
+
+    .dm-item { display:flex; gap:12px; align-items:center; padding:11px 16px; cursor:pointer; border-bottom:1px solid var(--line); border-left:2px solid transparent; transition:background .12s; }
+    .dm-item:hover { background:var(--panel); }
+    .dm-item.active { background:var(--panel); border-left-color:var(--green); }
+    .dm-item-avatar { width:38px; height:38px; flex:0 0 auto; background:var(--panel-3); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-weight:600; font-size:14px; color:var(--text-2); overflow:hidden; }
+    .dm-item.unread .dm-item-avatar { background:var(--green-dim); color:#eafff0; }
+    .dm-item-body { min-width:0; flex:1; }
+    .dm-item-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+    .dm-item-name { font-size:14px; font-weight:500; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .dm-item.unread .dm-item-name { color:var(--text); font-weight:600; }
+    .dm-item-time { font-family:var(--mono); font-size:10.5px; color:var(--text-4); flex:0 0 auto; }
+    .dm-item-bottom { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px; }
+    .dm-item-preview { font-size:12.5px; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .dm-item.unread .dm-item-preview { color:var(--text-2); }
+    .dm-item-dot { width:8px; height:8px; background:var(--red); flex:0 0 auto; }
+
+    .dm-chat-pane { flex:1; display:flex; flex-direction:column; min-width:0; }
+    .dm-chat-empty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-4); font-size:13px; padding:24px; max-width:48ch; margin:0 auto; text-align:center; }
+    .dm-chat-active { flex:1; display:flex; flex-direction:column; min-height:0; }
+
+    .dm-chat-header { display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel-2); }
+    .dm-back-btn { display:none; width:32px; height:32px; background:transparent; border:1px solid var(--line-2); color:var(--text-2); font-size:15px; }
+    .dm-chat-title-clickable { display:flex; align-items:center; gap:12px; cursor:pointer; flex:1; min-width:0; }
+    .dm-chat-title-clickable:hover .dm-chat-name { color:var(--green); }
+    .dm-chat-avatar { width:32px; height:32px; background:var(--green-dim); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-weight:600; font-size:13px; color:#eafff0; flex:0 0 auto; overflow:hidden; }
+    .dm-chat-avatar.group { background:var(--panel-3); color:var(--text-2); }
+    .dm-chat-name { font-size:15px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .15s; }
+
+    .dm-messages { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:4px; }
+    .dm-date-sep { display:flex; align-items:center; gap:12px; margin:14px 0 10px; }
+    .dm-date-sep::before, .dm-date-sep::after { content:''; flex:1; height:1px; background:var(--line); }
+    .dm-date-sep span { font-family:var(--mono); font-size:11px; color:var(--text-3); text-transform:capitalize; }
+    .dm-date-sep:first-child { margin-top:0; }
+    .dm-system-msg { text-align:center; color:var(--text-3); font-size:12px; margin:6px 0 12px; }
+    .dm-msg { display:flex; margin-bottom:4px; }
+    .dm-msg.mine { justify-content:flex-end; }
+    .dm-msg.theirs { justify-content:flex-start; }
+    .dm-msg-bubble { max-width:72%; padding:8px 12px 7px; font-size:14px; line-height:1.5; position:relative; word-wrap:break-word; white-space:pre-wrap; }
+    .dm-msg.mine .dm-msg-bubble { background:#163a26; color:#eafff0; border-right:2px solid var(--green); }
+    .dm-msg.theirs .dm-msg-bubble { background:var(--panel-3); color:var(--text); border-left:2px solid var(--line-2); }
+    .dm-msg-sender { display:block; font-size:11px; font-weight:600; color:#7fffa8; margin-bottom:2px; }
+    .dm-msg-time { display:inline-block; font-family:var(--mono); font-size:10px; opacity:.5; margin-left:8px; }
+    .dm-chat-empty-msg { text-align:center; color:var(--text-4); font-size:13px; padding:30px 10px; }
+
+    .dm-composer { display:flex; gap:0; align-items:stretch; padding:12px 16px; border-top:1px solid var(--line); }
+    .dm-composer textarea {
+        flex:1; resize:none; min-height:40px; max-height:120px; overflow-y:auto;
+        background:var(--bg); border:1px solid var(--line-2); border-right:none; color:var(--text);
+        font-size:14px; line-height:1.5; padding:9px 12px; transition:border-color .15s;
+    }
+    .dm-composer textarea::placeholder { color:var(--text-4); }
+    .dm-composer textarea:focus { outline:none; border-color:var(--green); }
+    .dm-composer button { width:48px; flex:0 0 auto; background:var(--green); color:#04140a; border:1px solid var(--green); font-size:14px; display:flex; align-items:center; justify-content:center; }
+    .dm-composer button:hover { background:#29b866; }
+
+    /* Кнопка "+" (новый диалог / группа) */
+    .dm-fab-wrap { position:absolute; left:0; right:0; bottom:0; z-index:5; padding:12px 16px; background:var(--bg); border-top:1px solid var(--line); }
+    .dm-fab { width:100%; height:36px; background:transparent; color:var(--text); border:1px solid var(--line-2); font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .dm-fab::after { content:'Новый чат'; }
+    .dm-fab:hover { border-color:var(--green); color:var(--green); }
+    .dm-fab-menu { position:absolute; bottom:calc(100% - 4px); left:16px; right:16px; background:var(--panel); border:1px solid var(--line-2); padding:4px 0; display:none; flex-direction:column; box-shadow:0 12px 32px rgba(0,0,0,.6); }
+    .dm-fab-menu.show { display:flex; }
+    .dm-fab-menu button { background:transparent; border:none; color:var(--text-2); font-size:13px; text-align:left; padding:9px 14px; }
+    .dm-fab-menu button:hover { background:var(--green-bg); color:var(--green); }
+
+    /* ---------------- МОДАЛКИ ---------------- */
+    .cab-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.82); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+    .cab-modal-overlay.open { display:flex; }
+    .cab-modal-box { background:var(--panel); border:1px solid var(--line-2); border-top:2px solid var(--green); width:100%; max-width:400px; max-height:84vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.7); }
+    .cab-modal-header { display:flex; align-items:center; justify-content:space-between; padding:12px 12px 12px 20px; border-bottom:1px solid var(--line); font-family:var(--cond); font-size:18px; font-weight:600; color:var(--text); flex:0 0 auto; }
+    .cab-modal-close { width:32px; height:32px; background:transparent; border:1px solid transparent; color:var(--text-3); font-size:20px; line-height:1; }
+    .cab-modal-close:hover { color:var(--text); border-color:var(--line-2); }
+    .cab-modal-body { padding:16px 20px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+    #profileModalBody { align-items:stretch !important; text-align:left !important; }
+
+    .picker-list { display:flex; flex-direction:column; max-height:280px; overflow-y:auto; border:1px solid var(--line); }
+    .picker-item { display:flex; align-items:center; gap:10px; padding:8px 10px; cursor:pointer; border-bottom:1px solid var(--line); }
+    .picker-item:last-child { border-bottom:none; }
+    .picker-item:hover { background:var(--panel-3); }
+    .picker-item-avatar { width:28px; height:28px; background:var(--panel-3); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:12px; font-weight:600; color:var(--text-2); flex:0 0 auto; overflow:hidden; }
+    .picker-item-name { font-size:13.5px; color:var(--text); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .picker-item-name span { font-family:var(--mono); font-size:12px; color:var(--text-4); }
+    .picker-item-check { width:16px; height:16px; border:1px solid var(--line-2); flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-size:11px; color:#04140a; font-weight:700; }
+    .picker-item.selected .picker-item-check { background:var(--green); border-color:var(--green); }
+    .picker-empty { color:var(--text-4); font-size:13px; padding:16px 10px; }
+    .picker-confirm-btn { height:38px; background:var(--green); color:#04140a; border:none; font-weight:600; font-size:14px; }
+    .picker-confirm-btn:hover { background:#29b866; }
+
+    .profile-modal-avatar { width:64px; height:64px; margin:4px 0 0; background:var(--green-dim); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:22px; font-weight:600; color:#eafff0; overflow:hidden; }
+    .profile-modal-avatar.group { background:var(--panel-3); color:var(--text-2); }
+    .profile-modal-name { font-family:var(--cond); font-size:22px; font-weight:600; color:var(--text); margin-top:10px; text-align:left; }
+    .profile-modal-cid { font-family:var(--mono); font-size:12px; color:var(--text-3); text-align:left; }
+    .profile-modal-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(100px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); margin:14px 0 4px; }
+    .profile-modal-stat { display:flex; flex-direction:column-reverse; gap:2px; background:var(--panel); padding:10px 12px; }
+    .profile-modal-stat span { font-family:var(--mono); font-size:22px; font-weight:500; color:var(--green); }
+    .profile-modal-stat label { font-size:12px; color:var(--text-3); }
+    .profile-modal-link { display:block; color:var(--green); font-size:13px; text-decoration:underline; text-underline-offset:3px; margin-bottom:4px; }
+    .profile-modal-danger, .profile-modal-secondary { width:100%; height:38px; background:transparent; font-weight:600; font-size:13px; transition:background .15s, color .15s; margin-top:4px; }
+    .profile-modal-danger { border:1px solid var(--red-line); color:var(--red); }
+    .profile-modal-danger:hover { background:var(--red); color:#fff; }
+    .profile-modal-secondary { border:1px solid var(--green-line); color:var(--green); }
+    .profile-modal-secondary:hover { background:var(--green); color:#04140a; }
+    .profile-group-members { text-align:left; max-height:180px; overflow-y:auto; margin:6px 0 4px; border:1px solid var(--line); }
+    .profile-group-member { font-size:13px; color:var(--text-2); padding:7px 10px; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid var(--line); }
+    .profile-group-member:last-child { border-bottom:none; }
+    .profile-group-member span { font-family:var(--mono); color:var(--text-4); font-size:11px; }
+    .profile-group-member-remove { color:var(--red); cursor:pointer; font-size:12px; padding:2px 7px; border:1px solid transparent; flex:0 0 auto; }
+    .profile-group-member-remove:hover { border-color:var(--red-line); }
+
+    /* ---------------- АВАТАРКИ ---------------- */
+    .cab-avatar img, .dm-chat-avatar img, .dm-item-avatar img, .picker-item-avatar img, .profile-modal-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+
+    /* ---------------- НАСТРОЙКИ ---------------- */
+    .settings-avatar-row { display:flex; align-items:flex-start; gap:16px; margin-bottom:16px; }
+    .settings-avatar-row .cab-avatar { width:64px; height:64px; font-size:22px; }
+    .settings-label { font-size:12px; font-weight:500; color:var(--text-3); display:block; margin-bottom:6px; }
+    .cab-modal-input { height:38px; }
+    .settings-save-btn { height:38px; background:var(--green); color:#04140a; border:none; padding:0 18px; font-weight:600; font-size:14px; }
+    .settings-save-btn:hover { background:#29b866; }
+    .settings-save-msg { font-size:13px; color:var(--green); margin-top:8px; display:none; }
+    .settings-hint { font-size:12px; color:var(--text-4); margin-top:6px; }
+
+    /* ---------------- МОБИЛЬНАЯ ВЕРСИЯ ---------------- */
+    @media (max-width: 760px) {
+        .cab-top { padding:0 16px; }
+        .cab-shell { grid-template-columns:1fr; padding:16px 16px 40px; gap:16px; }
+        .cab-sidenav { position:static; flex-direction:row; }
+        .cab-navitem { flex:1; justify-content:center; border-bottom:2px solid transparent; border-left:none; border-right:1px solid var(--line); padding:11px 6px; font-size:13px; }
+        .cab-navitem:last-child { border-right:none; border-bottom:2px solid transparent; }
+        .cab-navitem.active { border-bottom-color:var(--green); }
+        .bot-actions { grid-template-columns:1fr; }
+        .bot-actions button + button { border-left:1px solid var(--line-2); border-top:none; }
+
+        .dm-shell { height:calc(100vh - 200px); }
+        .dm-list-pane { width:100%; flex:1 1 auto; border-right:none; }
+        .dm-chat-pane { display:none; position:absolute; inset:0; background:var(--bg); }
+        .dm-shell.chat-open { position:relative; }
+        .dm-shell.chat-open .dm-list-pane { display:none; }
+        .dm-shell.chat-open .dm-chat-pane { display:flex; position:static; }
+        .dm-back-btn { display:inline-flex; align-items:center; justify-content:center; }
+        .dm-msg-bubble { max-width:86%; }
+    }
+</style>
+</head>
+<body>
+
+    <div class="cab-top">
+        <div class="brand"><img src="https://i.imgur.com/cXXk9hl.png" alt="vClearance"><span>Личный кабинет</span></div>
+        <a class="back" href="{{ '/' | relative_url }}">На главную</a>
+    </div>
+
+    <div id="loginGate">
+        <div class="gate-box">
+            <h1>Личный кабинет</h1>
+            <p class="sub">Войдите под своим VATSIM CID</p>
+            <div class="profile-login-form">
+                <input type="text" id="gateCid" placeholder="VATSIM CID" autocomplete="off" maxlength="8">
+                <input type="password" id="gatePassword" placeholder="Пароль (если задан)" autocomplete="off" onkeydown="if(event.key==='Enter') doLogin();">
+                <button onclick="doLogin()">Войти</button>
+                <div id="gateError" class="form-error" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="cabApp">
+        <div class="cab-shell">
+            <nav class="cab-sidenav">
+                <button class="cab-navitem active" data-tab="home" onclick="window.switchCabTab('home')">
+                    <span>Главная</span>
+                </button>
+                <button class="cab-navitem" data-tab="messenger" onclick="window.switchCabTab('messenger')">
+                    <span>Мессенджер</span><span class="nav-dot" id="messengerNavDot"></span>
+                </button>
+                <button class="cab-navitem" data-tab="settings" onclick="window.switchCabTab('settings')">
+                    <span>Настройки</span>
+                </button>
+            </nav>
+
+            <div class="cab-content">
+
+                <!-- ================= ГЛАВНАЯ ================= -->
+                <div class="cab-tab" id="tabHome">
+                    <div class="cab-header">
+                        <div class="cab-avatar" id="cabAvatar">?</div>
+                        <div>
+                            <h2 id="cabName">—</h2>
+                            <div class="cid-tag" id="cabCid">CID —</div>
+                        </div>
+                        <div class="logout-link" onclick="doLogout()">Выйти</div>
+                    </div>
+
+                    <div class="stat-row">
+                        <div class="stat-box"><h4>Вылетов за клиренс</h4><div class="num" id="statClr">0</div></div>
+                        <div class="stat-box"><h4>Последний вылет</h4><div class="num num-sm" id="statLast">—</div></div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Мои полёты за клиренс</h3>
+                        <div class="card-scroll">
+                            <table class="roster-table roster-table-compact">
+                                <thead><tr><th>Дата</th><th>Позывной</th><th>Маршрут</th><th>Тип ВС</th></tr></thead>
+                                <tbody id="flightsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Связь с администрацией</h3>
+                        <div class="messenger-locked" id="supportLocked" style="display:none;">
+                            <div class="lock-icon"></div>
+                            <div class="lock-title">Поддержка заблокирована</div>
+                            <div class="lock-sub">Администрация ограничила вам доступ к чату поддержки.</div>
+                        </div>
+                        <div id="supportBody" class="card-pad">
+                            <div class="bot-actions">
+                                <button onclick="openComposer('help')">Помощь</button>
+                                <button onclick="openComposer('bug')">Сообщить о баге</button>
+                                <button onclick="openComposer('idea')">Предложить идею</button>
+                            </div>
+                            <div class="chat-msgs" id="chatMsgsBox"><div class="chat-empty">Пока нет сообщений — выберите тему выше</div></div>
+                            <div class="chat-composer" id="chatComposer">
+                                <textarea id="chatInput" rows="4" placeholder="Опишите ваш вопрос..." oninput="autoGrow(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendMessage(); }"></textarea>
+                                <button onclick="sendMessage()">Отправить</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= МЕССЕНДЖЕР ================= -->
+                <div class="cab-tab" id="tabMessenger" style="display:none;">
+                    <div class="messenger-locked" id="messengerLocked" style="display:none;">
+                        <div class="lock-icon"></div>
+                        <div class="lock-title">Мессенджер заблокирован</div>
+                        <div class="lock-sub">Администрация ограничила вам доступ к мессенджеру. Обратитесь на вкладку «Главная», чтобы связаться с администрацией.</div>
+                    </div>
+                    <div class="dm-shell" id="dmShell">
+                        <div class="dm-list-pane" id="dmListPane">
+                            <div class="dm-list-header">Сообщения</div>
+                            <div class="dm-list" id="dmList">
+                                <div class="dm-list-empty">Загрузка...</div>
+                            </div>
+                            <div class="dm-fab-wrap">
+                                <div class="dm-fab-menu" id="dmFabMenu">
+                                    <button onclick="window.openNewDialogPicker()">Новый диалог</button>
+                                    <button onclick="window.openNewGroupPicker()">Новая группа</button>
+                                </div>
+                                <button class="dm-fab" onclick="window.toggleFabMenu(event)" title="Новый диалог или группа">+</button>
+                            </div>
+                        </div>
+                        <div class="dm-chat-pane" id="dmChatPane">
+                            <div class="dm-chat-empty" id="dmChatEmpty">Выберите диалог слева, нажмите «+» чтобы начать новый, или откройте профиль пилота в ростере и нажмите «Написать в ЛС»</div>
+                            <div class="dm-chat-active" id="dmChatActive" style="display:none;">
+                                <div class="dm-chat-header">
+                                    <button class="dm-back-btn" id="dmBackBtn" onclick="window.closeDmChat()" aria-label="Назад">←</button>
+                                    <div class="dm-chat-title-clickable" onclick="window.openThreadProfile()" title="Открыть профиль">
+                                        <div class="dm-chat-avatar" id="dmChatAvatar">?</div>
+                                        <div class="dm-chat-name" id="dmChatName">—</div>
+                                    </div>
+                                </div>
+                                <div class="dm-messages" id="dmMessages"></div>
+                                <div class="dm-composer">
+                                    <textarea id="dmInput" rows="1" placeholder="Написать сообщение..." oninput="window.autoGrowDm(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); window.sendDmMessage(); }"></textarea>
+                                    <button onclick="window.sendDmMessage()" title="Отправить" aria-label="Отправить">→</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= НАСТРОЙКИ ================= -->
+                <div class="cab-tab" id="tabSettings" style="display:none;">
+                    <div class="card">
+                        <h3>Настройки профиля</h3>
+                        <div class="settings-avatar-row">
+                            <div class="cab-avatar" id="settingsAvatarPreview">?</div>
+                            <div style="flex:1; min-width:0;">
+                                <label class="settings-label" for="avatarUrlInput">Ссылка на аватарку (URL изображения)</label>
+                                <input type="text" id="avatarUrlInput" class="cab-modal-input" placeholder="https://..." oninput="window.previewAvatarUrl()">
+                                <div class="settings-hint">Вставьте прямую ссылку на картинку — она появится вместо буквы в кабинете и мессенджере.</div>
+                            </div>
+                        </div>
+                        <button class="settings-save-btn" onclick="window.saveAvatarUrl()">Сохранить</button>
+                        <div class="settings-save-msg" id="avatarSaveMsg">Сохранено!</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= МОДАЛКА: профиль собеседника / группы ================= -->
+    <div class="cab-modal-overlay" id="profileModal">
+        <div class="cab-modal-box">
+            <div class="cab-modal-header">
+                <span>Профиль</span>
+                <button class="cab-modal-close" onclick="window.closeProfileModal()">×</button>
+            </div>
+            <div class="cab-modal-body" id="profileModalBody" style="align-items:center; text-align:center;"></div>
+        </div>
+    </div>
+
+    <!-- ================= МОДАЛКА: новый диалог / новая группа ================= -->
+    <div class="cab-modal-overlay" id="pickerModal">
+        <div class="cab-modal-box">
+            <div class="cab-modal-header">
+                <span id="pickerModalTitle">Новый диалог</span>
+                <button class="cab-modal-close" onclick="window.closePickerModal()">×</button>
+            </div>
+            <div class="cab-modal-body">
+                <input type="text" id="groupNameInput" class="cab-modal-input" placeholder="Название группы" maxlength="40" style="display:none;">
+                <input type="text" id="pickerSearchInput" class="cab-modal-input" placeholder="Поиск пилота..." oninput="window.renderPickerList()">
+                <div class="picker-list" id="pickerList"></div>
+                <button class="picker-confirm-btn" id="pickerConfirmBtn" style="display:none;" onclick="window.pickerConfirmAction()">Создать группу</button>
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import {
+    getFirestore, doc, getDoc, getDocs, setDoc, addDoc, collection, onSnapshot, query, where, orderBy, arrayRemove, arrayUnion
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCa2nr-heFF5LqoqN_tPYGJpf9PGhqMydo",
+    authDomain: "vclearance-15b43.firebaseapp.com",
+    projectId: "vclearance-15b43",
+    storageBucket: "vclearance-15b43.firebasestorage.app",
+    messagingSenderId: "299361728910",
+    appId: "1:299361728910:web:7e77b2f4431db23a66ccdf"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const BASE_PILOTS = [{ cid: "1816284", name: "Karim I." }];
+let currentCid = null;
+let currentName = 'Пилот';
+let pendingCategory = null;
+
+const CAT_LABEL = { help: 'Помощь', bug: 'Баг', idea: 'Идея' };
+
+const CABINET_SESSION_KEY = 'vc_cabinet_session'; // localStorage — запоминает вход в ЛК между визитами
+
+/* ---------------- ВХОД (та же логика паролей, что и на сайте) ---------------- */
+async function verifyPilot(cid, password) {
+    const snap = await getDoc(doc(db, 'pilot_auth', cid));
+    if (snap.exists()) {
+        const data = snap.data();
+        if (data.password !== password) return false;
+    }
+    // Если для CID ещё не выдан пароль — вход выполняется по одному CID
+    // (так же, как кнопка «это я!» на сайте), пока админ не выдаст пароль.
+    return true;
+}
+
+window.doLogin = async function() {
+    const cid = document.getElementById('gateCid').value.trim();
+    const password = document.getElementById('gatePassword').value;
+    const errDiv = document.getElementById('gateError');
+    errDiv.style.display = 'none';
+    if (!cid) return;
+
+    try {
+        const ok = await verifyPilot(cid, password);
+        if (!ok) {
+            errDiv.textContent = 'Неверный пароль!';
+            errDiv.style.display = 'block';
+            return;
+        }
+        localStorage.setItem(CABINET_SESSION_KEY, JSON.stringify({ cid, password }));
+        enterCabinet(cid);
+    } catch (e) {
+        console.error(e);
+        errDiv.textContent = 'Ошибка проверки. Попробуйте снова.';
+        errDiv.style.display = 'block';
+    }
+};
+
+window.doLogout = function() {
+    localStorage.removeItem(CABINET_SESSION_KEY);
+    location.reload();
+};
+
+// При открытии страницы пробуем восстановить сохранённый вход в ЛК,
+// заново проверяя CID+пароль в Firebase (на случай, если пароль сменили).
+// Если своей сессии ЛК ещё нет — пробуем подхватить общий вход с сайта
+// (кнопка «Войти» в шапке), чтобы переход по кнопке «Написать в ЛС»
+// из ростера не требовал повторного ввода CID/пароля.
+(async function restoreSession() {
+    let raw = localStorage.getItem(CABINET_SESSION_KEY);
+    if (!raw) {
+        const siteCid = localStorage.getItem('vatsim_pilot_cid');
+        if (siteCid) {
+            raw = JSON.stringify({ cid: siteCid, password: localStorage.getItem('vc_pilot_pwd') || '' });
+        }
+    }
+    if (!raw) return;
+    try {
+        const { cid, password } = JSON.parse(raw);
+        const ok = await verifyPilot(cid, password);
+        if (ok) {
+            localStorage.setItem(CABINET_SESSION_KEY, JSON.stringify({ cid, password }));
+            enterCabinet(cid);
+        } else {
+            localStorage.removeItem(CABINET_SESSION_KEY);
+        }
+    } catch (e) {
+        localStorage.removeItem(CABINET_SESSION_KEY);
+    }
+})();
+
+async function enterCabinet(cid) {
+    currentCid = cid.toString();
+    document.getElementById('loginGate').style.display = 'none';
+    document.getElementById('cabApp').style.display = 'block';
+    document.getElementById('cabCid').textContent = 'CID ' + currentCid;
+
+    // Имя ищем среди базовых + добавленных пилотов
+    try {
+        let name = null;
+        const baseMatch = BASE_PILOTS.find(p => p.cid.toString() === currentCid);
+        if (baseMatch) name = baseMatch.name;
+        if (!name) {
+            const cpSnap = await getDoc(doc(db, 'custom_pilots', currentCid));
+            if (cpSnap.exists()) name = cpSnap.data().name;
+        }
+        currentName = name || ('CID ' + currentCid);
+    } catch (e) { currentName = 'CID ' + currentCid; }
+
+    document.getElementById('cabName').textContent = currentName;
+    document.getElementById('cabAvatar').textContent = currentName.trim().charAt(0).toUpperCase() || '?';
+
+    loadFlights();
+    ensureThreadAndListen();
+    listenAllPilots();
+    listenDmThreads();
+    listenGroupThreads();
+    listenAdmins();
+    listenAvatars();
+    listenMessengerBlock();
+    listenSupportBlock();
+    handleDeepLink();
+}
+
+/* ---------------- БЛОКИРОВКА МЕССЕНДЖЕРА (устанавливается Основателем из ростера) ----------------
+   messenger_blocks/{cid}: { blockAt: ISO-время, setBy, setAt }
+   Блокировка вступает в силу через 10 секунд после того, как её назначили, поэтому
+   реальный статус ("ещё не наступила" / "уже активна") пересчитывается на лету
+   сравнением blockAt с текущим временем — как в момент прихода данных из Firestore,
+   так и по таймеру (сайт статический, отдельного сервера/крона нет). */
+let messengerBlockInfo = null;   // { blockAt } | null
+let messengerBlockTimer = null;
+
+function listenMessengerBlock() {
+    onSnapshot(doc(db, 'messenger_blocks', currentCid), snap => {
+        messengerBlockInfo = snap.exists() ? snap.data() : null;
+        applyMessengerLockUI();
+    }, err => console.error('Ошибка проверки блокировки мессенджера:', err));
+
+    if (messengerBlockTimer) clearInterval(messengerBlockTimer);
+    // Раз в секунду перепроверяем — чтобы статус "ожидает" сам сменился на
+    // "активна" через 10 секунд, даже если вкладка мессенджера уже открыта.
+    // Проверяем раз в секунду — иначе при 10-секундной задержке смена статуса
+    // была бы заметна с опозданием.
+    messengerBlockTimer = setInterval(applyMessengerLockUI, 1000);
+}
+
+function isMessengerBlocked() {
+    if (!messengerBlockInfo || !messengerBlockInfo.blockAt) return false;
+    return new Date(messengerBlockInfo.blockAt).getTime() <= Date.now();
+}
+
+function applyMessengerLockUI() {
+    const lockedEl = document.getElementById('messengerLocked');
+    const shellEl = document.getElementById('dmShell');
+    if (!lockedEl || !shellEl) return;
+    const blocked = isMessengerBlocked();
+    lockedEl.style.display = blocked ? 'flex' : 'none';
+    shellEl.style.display = blocked ? 'none' : '';
+    if (blocked) window.closeDmChat();
+}
+
+/* ---------------- БЛОКИРОВКА ПОДДЕРЖКИ (устанавливается Основателем из ростера) ----------------
+   support_blocks/{cid}: { blockAt: ISO-время, setBy, setAt } — та же 10-секундная
+   отложенная логика, что и у блокировки мессенджера, но отдельная коллекция
+   и отдельная кнопка в ростере: блокирует только вкладку «Связь с администрацией». */
+let supportBlockInfo = null;
+let supportBlockTimer = null;
+
+function listenSupportBlock() {
+    onSnapshot(doc(db, 'support_blocks', currentCid), snap => {
+        supportBlockInfo = snap.exists() ? snap.data() : null;
+        applySupportLockUI();
+    }, err => console.error('Ошибка проверки блокировки поддержки:', err));
+
+    if (supportBlockTimer) clearInterval(supportBlockTimer);
+    supportBlockTimer = setInterval(applySupportLockUI, 1000);
+}
+
+function isSupportBlocked() {
+    if (!supportBlockInfo || !supportBlockInfo.blockAt) return false;
+    return new Date(supportBlockInfo.blockAt).getTime() <= Date.now();
+}
+
+function applySupportLockUI() {
+    const lockedEl = document.getElementById('supportLocked');
+    const bodyEl = document.getElementById('supportBody');
+    if (!lockedEl || !bodyEl) return;
+    const blocked = isSupportBlocked();
+    lockedEl.style.display = blocked ? 'flex' : 'none';
+    bodyEl.style.display = blocked ? 'none' : '';
+    if (blocked) {
+        const composer = document.getElementById('chatComposer');
+        if (composer) composer.style.display = 'none';
+    }
+}
+
+/* ---------------- ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК (Главная / Мессенджер) ---------------- */
+window.switchCabTab = function(tab) {
+    document.querySelectorAll('.cab-navitem').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+    document.getElementById('tabHome').style.display = tab === 'home' ? 'block' : 'none';
+    document.getElementById('tabMessenger').style.display = tab === 'messenger' ? 'block' : 'none';
+    document.getElementById('tabSettings').style.display = tab === 'settings' ? 'block' : 'none';
+    if (tab === 'messenger') applyMessengerLockUI();
+    if (tab === 'settings') {
+        const input = document.getElementById('avatarUrlInput');
+        if (input) input.value = avatarsMap[currentCid] || '';
+        window.previewAvatarUrl();
+    }
+};
+
+/* ---------------- НАСТРОЙКИ: АВАТАРКА ---------------- */
+window.previewAvatarUrl = function() {
+    const input = document.getElementById('avatarUrlInput');
+    const preview = document.getElementById('settingsAvatarPreview');
+    if (!input || !preview) return;
+    const url = (input.value || '').trim();
+    const letter = currentName.trim().charAt(0).toUpperCase() || '?';
+    if (url) {
+        preview.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(letter)}" onerror="window.__avatarErr(this)">`;
+    } else {
+        preview.textContent = letter;
+    }
+};
+
+window.saveAvatarUrl = async function() {
+    const input = document.getElementById('avatarUrlInput');
+    const url = (input.value || '').trim();
+    try {
+        await setDoc(doc(db, 'pilot_avatars', currentCid), { url }, { merge: true });
+        const msg = document.getElementById('avatarSaveMsg');
+        if (msg) {
+            msg.style.display = 'block';
+            clearTimeout(window.__avatarSaveMsgTimeout);
+            window.__avatarSaveMsgTimeout = setTimeout(() => { msg.style.display = 'none'; }, 2200);
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Не удалось сохранить аватарку. Попробуйте ещё раз.');
+    }
+};
+
+// Открытие ЛК по ссылке из ростера: cabinet.html?dm=CID&name=Имя
+function handleDeepLink() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const dmCid = params.get('dm');
+        if (!dmCid) return;
+        const dmName = params.get('name') || '';
+        window.switchCabTab('messenger');
+        if (!isMessengerBlocked()) window.openDmThread(dmCid, dmName);
+    } catch (e) { console.error(e); }
+}
+
+/* ---------------- ПОЛЁТЫ ЗА КЛИРЕНС ---------------- */
+async function loadFlights() {
+    try {
+        const snap = await getDocs(query(collection(db, 'recent_flights'), where('cid', '==', currentCid)));
+        const flights = snap.docs.map(d => d.data()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        document.getElementById('statClr').textContent = flights.length;
+        document.getElementById('statLast').textContent = flights.length
+            ? new Date(flights[0].timestamp).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+            : '—';
+
+        document.getElementById('flightsBody').innerHTML = flights.map(f => `
+            <tr>
+                <td style="color:#aaa;">${new Date(f.timestamp).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
+                <td>${escapeHtml(f.callsign || '---')}</td>
+                <td>${escapeHtml(f.route || '---')}</td>
+                <td>${escapeHtml(f.aircraft || '---')}</td>
+            </tr>
+        `).join('') || `<tr><td colspan="4" style="text-align:center; padding:16px; color:#666;">Полётов за клиренс пока нет</td></tr>`;
+    } catch (e) { console.error('Ошибка загрузки полётов:', e); }
+}
+
+/* ---------------- ЧАТ С АДМИНИСТРАЦИЕЙ (техподдержка) ---------------- */
+window.openComposer = function(category) {
+    if (isSupportBlocked()) { applySupportLockUI(); return; }
+    pendingCategory = category;
+    const composer = document.getElementById('chatComposer');
+    composer.style.display = 'flex';
+    const input = document.getElementById('chatInput');
+    input.placeholder = `Тема: ${CAT_LABEL[category]}. Опишите подробнее...`;
+    input.style.height = 'auto';
+    input.focus();
+};
+
+window.autoGrow = function(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+};
+
+window.sendMessage = async function() {
+    if (isSupportBlocked()) { applySupportLockUI(); return; }
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    input.style.height = 'auto';
+    const nowIso = new Date().toISOString();
+    try {
+        await addDoc(collection(db, 'chat_threads', currentCid, 'messages'), {
+            from: 'user', text, category: pendingCategory, timestamp: nowIso
+        });
+        await setDoc(doc(db, 'chat_threads', currentCid), {
+            cid: currentCid, name: currentName, lastMessage: text, lastTimestamp: nowIso,
+            lastFrom: 'user', unreadForAdmin: true, archived: false
+        }, { merge: true });
+        document.getElementById('chatComposer').style.display = 'none';
+        pendingCategory = null;
+    } catch (e) { console.error(e); alert('Не удалось отправить сообщение. Попробуйте ещё раз.'); }
+};
+
+function ensureThreadAndListen() {
+    onSnapshot(query(collection(db, 'chat_threads', currentCid, 'messages'), orderBy('timestamp', 'asc')), snap => {
+        const box = document.getElementById('chatMsgsBox');
+        if (snap.empty) {
+            box.innerHTML = `<div class="chat-empty">Пока нет сообщений — выберите тему выше</div>`;
+            return;
+        }
+        box.innerHTML = snap.docs.map(d => {
+            const m = d.data();
+            return `
+                <div class="msg ${m.from === 'admin' ? 'admin' : 'user'}">
+                    ${m.from === 'admin' ? `<span class="replier">${escapeHtml(m.adminName || 'Администрация')}</span>` : ''}
+                    ${m.category ? `<span class="cat">${CAT_LABEL[m.category] || m.category}</span><br>` : ''}
+                    ${escapeHtml(m.text || '')}
+                    <span class="ts">${new Date(m.timestamp).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</span>
+                </div>
+            `;
+        }).join('');
+        box.scrollTop = box.scrollHeight;
+        // Пометить как прочитанное пользователем
+        setDoc(doc(db, 'chat_threads', currentCid), { unreadForUser: false }, { merge: true }).catch(() => {});
+    });
+}
+
+/* =========================================================
+   МЕССЕНДЖЕР (личные сообщения + группы)
+
+   dm_threads/{cidA_cidB}: participants:[cidA,cidB], names:{cid:имя},
+     lastMessage/lastTimestamp/lastFrom, unread:{cid:bool}, hiddenFor:{cid:bool}
+     dm_threads/{id}/messages: {from, text, timestamp}
+
+   group_threads/{autoId}: name, members:[cid...], names:{cid:имя}, createdBy,
+     lastMessage/lastTimestamp/lastFrom, unread:{cid:bool}
+     group_threads/{id}/messages: {from, text, timestamp, type:'text'|'system'}
+   ========================================================= */
+let allPilots = [];
+let dmThreadsCache = [];
+let groupThreadsCache = [];
+let combinedList = [];
+let adminsMap = {};   // cid -> 'founder' | 'admin' (общая роль в компании, из коллекции 'admins')
+let avatarsMap = {};  // cid -> url аватарки
+
+let unsubDmThreads = null;
+let unsubGroupThreads = null;
+let unsubActiveMessages = null;
+
+let activeThreadKind = null;  // 'dm' | 'group'
+let activeThreadId = null;    // otherCid для dm, id группы для group
+let activeThreadName = null;
+let activeGroupData = null;
+
+let pickerMode = null;        // 'dialog' | 'group' | 'addMembers'
+let pickerSelected = new Set();
+let addMembersTargetGroupId = null;
+
+/* ---- роль пилота в компании (для прав на управление ЛЮБОЙ группой) ---- */
+function listenAdmins() {
+    onSnapshot(collection(db, 'admins'), snap => {
+        const map = {};
+        snap.forEach(d => { map[d.id] = d.data().role || 'admin'; });
+        adminsMap = map;
+    }, err => console.error('Ошибка загрузки списка администраторов:', err));
+}
+function isFounderCid(cid) {
+    return !!cid && adminsMap[cid.toString()] === 'founder';
+}
+// Управлять группой (переименовывать, добавлять/удалять участников) может тот, кто её создал,
+// а также Основатель — в любой группе.
+function canManageGroup(g) {
+    if (!g) return false;
+    return (g.createdBy && g.createdBy.toString() === currentCid.toString()) || isFounderCid(currentCid);
+}
+
+/* ---- аватарки пилотов (ссылка на картинку вместо буквы) ---- */
+function listenAvatars() {
+    onSnapshot(collection(db, 'pilot_avatars'), snap => {
+        const map = {};
+        snap.forEach(d => { const u = (d.data().url || '').trim(); if (u) map[d.id] = u; });
+        avatarsMap = map;
+        renderDmList();
+        const cabAvatarEl = document.getElementById('cabAvatar');
+        if (cabAvatarEl) cabAvatarEl.innerHTML = avatarCircleHtml(currentCid, currentName);
+        if (activeThreadKind === 'dm') {
+            const el = document.getElementById('dmChatAvatar');
+            if (el) el.innerHTML = avatarCircleHtml(activeThreadId, activeThreadName);
+        }
+    }, err => console.error('Ошибка загрузки аватарок:', err));
+}
+function avatarCircleHtml(cid, name) {
+    const key = cid ? cid.toString() : '';
+    const url = avatarsMap[key];
+    const letter = escapeHtml((name || '?').trim().charAt(0).toUpperCase() || '?');
+    if (url) return `<img src="${escapeHtml(url)}" alt="${letter}" onerror="window.__avatarErr(this)">`;
+    return letter;
+}
+window.__avatarErr = function(img) {
+    const span = document.createElement('span');
+    span.textContent = img.getAttribute('alt') || '?';
+    img.replaceWith(span);
+};
+
+/* ---- список всех пилотов компании (для выбора собеседника) ---- */
+function listenAllPilots() {
+    onSnapshot(collection(db, 'custom_pilots'), snap => {
+        const customPilots = snap.docs.map(d => ({ cid: d.id, name: d.data().name || ('CID ' + d.id) }));
+        allPilots = [...BASE_PILOTS, ...customPilots];
+    }, err => console.error('Ошибка загрузки списка пилотов:', err));
+}
+
+function dmThreadId(a, b) {
+    const x = a.toString(), y = b.toString();
+    const nx = Number(x), ny = Number(y);
+    if (!isNaN(nx) && !isNaN(ny) && x !== '' && y !== '') return nx < ny ? `${x}_${y}` : `${y}_${x}`;
+    return x < y ? `${x}_${y}` : `${y}_${x}`;
+}
+
+/* ---------------- ЗАГРУЗКА СПИСКОВ ДИАЛОГОВ И ГРУПП ---------------- */
+function listenDmThreads() {
+    if (unsubDmThreads) { unsubDmThreads(); unsubDmThreads = null; }
+    unsubDmThreads = onSnapshot(query(collection(db, 'dm_threads'), where('participants', 'array-contains', currentCid)), snap => {
+        dmThreadsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        rebuildCombinedList();
+    }, err => console.error('Ошибка загрузки диалогов:', err));
+}
+
+function listenGroupThreads() {
+    if (unsubGroupThreads) { unsubGroupThreads(); unsubGroupThreads = null; }
+    unsubGroupThreads = onSnapshot(query(collection(db, 'group_threads'), where('members', 'array-contains', currentCid)), snap => {
+        groupThreadsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        rebuildCombinedList();
+
+        // Если открыт чат/профиль активной группы — подхватываем изменения (переименование, состав) на лету
+        if (activeThreadKind === 'group' && activeThreadId) {
+            const updated = groupThreadsCache.find(g => g.id === activeThreadId);
+            if (updated) {
+                activeGroupData = updated;
+                activeThreadName = updated.name || 'Группа';
+                const nameEl = document.getElementById('dmChatName');
+                if (nameEl) nameEl.textContent = activeThreadName;
+                const modal = document.getElementById('profileModal');
+                if (modal && modal.classList.contains('open')) window.openThreadProfile();
+            } else {
+                // Нас удалили из группы (или группа исчезла) — закрываем чат/профиль
+                window.closeDmChat();
+                window.closeProfileModal();
+                activeThreadKind = null;
+                activeThreadId = null;
+                activeGroupData = null;
+            }
+        }
+    }, err => console.error('Ошибка загрузки групп:', err));
+}
+
+function rebuildCombinedList() {
+    const dmItems = dmThreadsCache
+        .filter(t => !(t.hiddenFor && t.hiddenFor[currentCid]))
+        .map(t => {
+            const otherCid = (t.participants || []).find(c => c && c.toString() !== currentCid.toString());
+            if (!otherCid) return null;
+            return {
+                kind: 'dm', id: t.id, otherCid,
+                title: (t.names && t.names[otherCid]) || ('CID ' + otherCid),
+                lastMessage: t.lastMessage || '', lastTimestamp: t.lastTimestamp || null, lastFrom: t.lastFrom || null,
+                unread: !!(t.unread && t.unread[currentCid]), raw: t
+            };
+        }).filter(Boolean);
+
+    const groupItems = groupThreadsCache.map(g => ({
+        kind: 'group', id: g.id,
+        title: g.name || 'Группа',
+        lastMessage: g.lastMessage || '', lastTimestamp: g.lastTimestamp || null, lastFrom: g.lastFrom || null,
+        unread: !!(g.unread && g.unread[currentCid]), raw: g
+    }));
+
+    combinedList = [...dmItems, ...groupItems].sort((a, b) => new Date(b.lastTimestamp || 0) - new Date(a.lastTimestamp || 0));
+    renderDmList();
+}
+
+function renderDmList() {
+    const listEl = document.getElementById('dmList');
+    if (!listEl) return;
+
+    if (!combinedList.length) {
+        listEl.innerHTML = `<div class="dm-list-empty">Пока нет диалогов.<br>Нажмите «+» внизу, чтобы начать переписку или создать группу.</div>`;
+        updateMessengerNavDot();
+        return;
+    }
+
+    listEl.innerHTML = combinedList.map(item => {
+        const isActive = activeThreadKind === item.kind &&
+            activeThreadId && activeThreadId.toString() === (item.kind === 'dm' ? item.otherCid : item.id).toString();
+        const timeStr = item.lastTimestamp ? formatListTime(new Date(item.lastTimestamp)) : '';
+        const mine = item.lastFrom === currentCid;
+
+        let previewPrefix = '';
+        if (item.lastFrom === 'system') previewPrefix = '';
+        else if (mine) previewPrefix = 'Вы: ';
+        else if (item.kind === 'group' && item.lastFrom) previewPrefix = ((item.raw.names && item.raw.names[item.lastFrom]) || '') + ': ';
+
+        const previewText = previewPrefix + (item.lastMessage || '');
+        const avatarLabel = item.kind === 'group' ? '#' : avatarCircleHtml(item.otherCid, item.title);
+        const openCall = item.kind === 'dm'
+            ? `window.openDmThread('${item.otherCid}', '${item.title.replace(/'/g, "\\'")}')`
+            : `window.openGroupThread('${item.id}')`;
+
+        return `
+            <div class="dm-item ${item.unread ? 'unread' : ''} ${isActive ? 'active' : ''}" onclick="${openCall}">
+                <div class="dm-item-avatar">${avatarLabel}</div>
+                <div class="dm-item-body">
+                    <div class="dm-item-top">
+                        <span class="dm-item-name">${escapeHtml(item.title)}</span>
+                        <span class="dm-item-time">${timeStr}</span>
+                    </div>
+                    <div class="dm-item-bottom">
+                        <span class="dm-item-preview">${escapeHtml(previewText)}</span>
+                        ${item.unread ? '<span class="dm-item-dot"></span>' : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    updateMessengerNavDot();
+}
+
+function updateMessengerNavDot() {
+    const anyUnread = combinedList.some(item => item.unread);
+    document.getElementById('messengerNavDot')?.classList.toggle('show', anyUnread);
+}
+
+function formatListTime(d) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const dd = new Date(d); dd.setHours(0, 0, 0, 0);
+    if (dd.getTime() === today.getTime()) return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+}
+
+function formatDayLabel(d) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const dd = new Date(d); dd.setHours(0, 0, 0, 0);
+    if (dd.getTime() === today.getTime()) return 'Сегодня';
+    if (dd.getTime() === yesterday.getTime()) return 'Вчера';
+    const opts = { day: '2-digit', month: 'long' };
+    if (dd.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
+    return d.toLocaleDateString('ru-RU', opts);
+}
+
+/* ---------------- ОТКРЫТИЕ ЛИЧНОГО ДИАЛОГА ---------------- */
+window.openDmThread = function(otherCid, otherName) {
+    if (isMessengerBlocked()) { applyMessengerLockUI(); return; }
+    otherCid = otherCid.toString();
+    if (otherCid === currentCid.toString()) return;
+
+    activeThreadKind = 'dm';
+    activeThreadId = otherCid;
+    activeGroupData = null;
+    const cachedThread = dmThreadsCache.find(t => (t.participants || []).some(c => c && c.toString() === otherCid));
+    activeThreadName = otherName || (cachedThread && cachedThread.names && cachedThread.names[otherCid]) || ('CID ' + otherCid);
+
+    document.getElementById('dmChatEmpty').style.display = 'none';
+    document.getElementById('dmChatActive').style.display = 'flex';
+    document.getElementById('dmChatName').textContent = activeThreadName;
+    const avatarEl = document.getElementById('dmChatAvatar');
+    avatarEl.classList.remove('group');
+    avatarEl.innerHTML = avatarCircleHtml(otherCid, activeThreadName);
+    document.getElementById('dmShell').classList.add('chat-open');
+
+    listenActiveThreadMessages();
+    markDmThreadRead(otherCid);
+
+    // если чат был ранее «удалён» локально — возвращаем его в список при открытии
+    if (cachedThread && cachedThread.hiddenFor && cachedThread.hiddenFor[currentCid]) {
+        setDoc(doc(db, 'dm_threads', dmThreadId(currentCid, otherCid)), { hiddenFor: { [currentCid]: false } }, { merge: true }).catch(() => {});
+    }
+
+    renderDmList();
+    if (window.history && window.history.replaceState) window.history.replaceState({}, '', window.location.pathname);
+};
+
+/* ---------------- ОТКРЫТИЕ ГРУППЫ ---------------- */
+window.openGroupThread = function(groupId) {
+    if (isMessengerBlocked()) { applyMessengerLockUI(); return; }
+    const g = groupThreadsCache.find(x => x.id === groupId);
+    if (!g) return;
+
+    activeThreadKind = 'group';
+    activeThreadId = groupId;
+    activeThreadName = g.name || 'Группа';
+    activeGroupData = g;
+
+    document.getElementById('dmChatEmpty').style.display = 'none';
+    document.getElementById('dmChatActive').style.display = 'flex';
+    document.getElementById('dmChatName').textContent = activeThreadName;
+    const avatarEl = document.getElementById('dmChatAvatar');
+    avatarEl.classList.add('group');
+    avatarEl.textContent = '#';
+    document.getElementById('dmShell').classList.add('chat-open');
+
+    listenActiveThreadMessages();
+    markGroupThreadRead(groupId);
+    renderDmList();
+    if (window.history && window.history.replaceState) window.history.replaceState({}, '', window.location.pathname);
+};
+
+window.closeDmChat = function() {
+    document.getElementById('dmShell').classList.remove('chat-open');
+};
+
+/* ---------------- СООБЩЕНИЯ АКТИВНОГО ЧАТА (ЛС или группа) ---------------- */
+function listenActiveThreadMessages() {
+    if (unsubActiveMessages) { unsubActiveMessages(); unsubActiveMessages = null; }
+
+    if (activeThreadKind === 'dm') {
+        const threadId = dmThreadId(currentCid, activeThreadId);
+        unsubActiveMessages = onSnapshot(query(collection(db, 'dm_threads', threadId, 'messages'), orderBy('timestamp', 'asc')), snap => {
+            renderThreadMessages(snap.docs.map(d => d.data()));
+            markDmThreadRead(activeThreadId);
+        }, err => console.error('Ошибка загрузки сообщений:', err));
+    } else if (activeThreadKind === 'group') {
+        unsubActiveMessages = onSnapshot(query(collection(db, 'group_threads', activeThreadId, 'messages'), orderBy('timestamp', 'asc')), snap => {
+            renderThreadMessages(snap.docs.map(d => d.data()));
+            markGroupThreadRead(activeThreadId);
+        }, err => console.error('Ошибка загрузки сообщений группы:', err));
+    }
+}
+
+function renderThreadMessages(msgs) {
+    const box = document.getElementById('dmMessages');
+    if (!box) return;
+    if (!msgs.length) {
+        box.innerHTML = `<div class="dm-chat-empty-msg">Сообщений пока нет. Напишите первым!</div>`;
+        return;
+    }
+
+    let html = '';
+    let lastDateKey = null;
+    msgs.forEach(m => {
+        const d = new Date(m.timestamp);
+        const dateKey = d.toDateString();
+        if (dateKey !== lastDateKey) {
+            html += `<div class="dm-date-sep"><span>${formatDayLabel(d)}</span></div>`;
+            lastDateKey = dateKey;
+        }
+
+        if (m.type === 'system') {
+            html += `<div class="dm-system-msg">${escapeHtml(m.text || '')}</div>`;
+            return;
+        }
+
+        const mine = m.from === currentCid;
+        const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        let senderLabel = '';
+        if (activeThreadKind === 'group' && !mine) {
+            const senderName = (activeGroupData && activeGroupData.names && activeGroupData.names[m.from]) || ('CID ' + m.from);
+            senderLabel = `<span class="dm-msg-sender">${escapeHtml(senderName)}</span>`;
+        }
+
+        html += `
+            <div class="dm-msg ${mine ? 'mine' : 'theirs'}">
+                <div class="dm-msg-bubble">${senderLabel}${escapeHtml(m.text || '')}<span class="dm-msg-time">${timeStr}</span></div>
+            </div>
+        `;
+    });
+
+    box.innerHTML = html;
+    box.scrollTop = box.scrollHeight;
+}
+
+function markDmThreadRead(otherCid) {
+    const threadId = dmThreadId(currentCid, otherCid);
+    const exists = dmThreadsCache.some(t => t.id === threadId);
+    if (!exists) return; // диалог ещё не создан (ни одного сообщения) — нечего помечать
+    setDoc(doc(db, 'dm_threads', threadId), { unread: { [currentCid]: false } }, { merge: true }).catch(() => {});
+}
+
+function markGroupThreadRead(groupId) {
+    const exists = groupThreadsCache.some(g => g.id === groupId);
+    if (!exists) return;
+    setDoc(doc(db, 'group_threads', groupId), { unread: { [currentCid]: false } }, { merge: true }).catch(() => {});
+}
+
+window.autoGrowDm = function(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+};
+
+/* ---------------- ОТПРАВКА СООБЩЕНИЯ (ЛС или группа) ---------------- */
+window.sendDmMessage = async function() {
+    if (isMessengerBlocked()) { applyMessengerLockUI(); return; }
+    const input = document.getElementById('dmInput');
+    if (!input || !activeThreadKind) return;
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    input.style.height = 'auto';
+    const nowIso = new Date().toISOString();
+
+    if (activeThreadKind === 'dm') {
+        const threadId = dmThreadId(currentCid, activeThreadId);
+        try {
+            await addDoc(collection(db, 'dm_threads', threadId, 'messages'), { from: currentCid, text, timestamp: nowIso });
+            await setDoc(doc(db, 'dm_threads', threadId), {
+                participants: [currentCid, activeThreadId],
+                names: { [currentCid]: currentName, [activeThreadId]: activeThreadName },
+                lastMessage: text, lastTimestamp: nowIso, lastFrom: currentCid,
+                unread: { [currentCid]: false, [activeThreadId]: true },
+                hiddenFor: { [currentCid]: false, [activeThreadId]: false }
+            }, { merge: true });
+        } catch (e) { console.error(e); alert('Не удалось отправить сообщение. Попробуйте ещё раз.'); }
+    } else if (activeThreadKind === 'group') {
+        try {
+            await addDoc(collection(db, 'group_threads', activeThreadId, 'messages'), { from: currentCid, text, timestamp: nowIso, type: 'text' });
+            const unreadUpdate = {};
+            (activeGroupData && activeGroupData.members || []).forEach(cid => { unreadUpdate[cid] = cid !== currentCid; });
+            await setDoc(doc(db, 'group_threads', activeThreadId), {
+                lastMessage: text, lastTimestamp: nowIso, lastFrom: currentCid, unread: unreadUpdate
+            }, { merge: true });
+        } catch (e) { console.error(e); alert('Не удалось отправить сообщение. Попробуйте ещё раз.'); }
+    }
+};
+
+/* ---------------- ПРОФИЛЬ СОБЕСЕДНИКА / ГРУППЫ ---------------- */
+window.openThreadProfile = async function() {
+    if (!activeThreadKind) return;
+    const modal = document.getElementById('profileModal');
+    const body = document.getElementById('profileModalBody');
+
+    if (activeThreadKind === 'dm') {
+        const otherCid = activeThreadId;
+        const otherName = activeThreadName;
+        body.innerHTML = `
+            <div class="profile-modal-avatar">${avatarCircleHtml(otherCid, otherName)}</div>
+            <div class="profile-modal-name">${escapeHtml(otherName)}</div>
+            <div class="profile-modal-cid">CID ${escapeHtml(otherCid)}</div>
+            <div class="profile-modal-stats">
+                <div class="profile-modal-stat"><span id="profileFlightsCount">…</span><label>вылетов за клиренс</label></div>
+            </div>
+            <a href="https://stats.vatsim.net/stats/${encodeURIComponent(otherCid)}" target="_blank" class="profile-modal-link">Статистика VATSIM</a>
+            <button class="profile-modal-danger" onclick="window.deleteDmChat('${otherCid}')">Удалить чат</button>
+        `;
+        modal.classList.add('open');
+        try {
+            const snap = await getDocs(query(collection(db, 'recent_flights'), where('cid', '==', otherCid)));
+            const el = document.getElementById('profileFlightsCount');
+            if (el) el.textContent = snap.size;
+        } catch (e) {
+            const el = document.getElementById('profileFlightsCount');
+            if (el) el.textContent = '—';
+        }
+    } else if (activeThreadKind === 'group') {
+        const g = activeGroupData || {};
+        const manage = canManageGroup(g);
+        const membersHtml = (g.members || []).map(cid => {
+            const nm = (g.names && g.names[cid]) || ('CID ' + cid);
+            const canRemove = manage && cid.toString() !== currentCid.toString();
+            const removeBtn = canRemove
+                ? `<span class="profile-group-member-remove" onclick="window.removeGroupMember('${activeThreadId}','${cid}')" title="Удалить из группы">✖</span>`
+                : '';
+            return `<div class="profile-group-member"><span>${escapeHtml(nm)} <span>(${escapeHtml(cid)})</span></span>${removeBtn}</div>`;
+        }).join('');
+        body.innerHTML = `
+            <div class="profile-modal-avatar group">#</div>
+            <div class="profile-modal-name">${escapeHtml(g.name || 'Группа')}</div>
+            <div class="profile-modal-cid">${(g.members || []).length} участник(ов)</div>
+            ${manage ? `<button class="profile-modal-secondary" onclick="window.renameGroupChat('${activeThreadId}')">Переименовать группу</button>` : ''}
+            ${manage ? `<button class="profile-modal-secondary" onclick="window.openAddMembersPicker('${activeThreadId}')">Добавить участника</button>` : ''}
+            <div class="profile-group-members">${membersHtml}</div>
+            <button class="profile-modal-danger" onclick="window.leaveGroupChat('${activeThreadId}')">Выйти из группы</button>
+        `;
+        modal.classList.add('open');
+    }
+};
+
+window.closeProfileModal = function() {
+    document.getElementById('profileModal').classList.remove('open');
+};
+
+window.deleteDmChat = async function(otherCid) {
+    if (!confirm('Удалить этот чат? Переписка исчезнет из вашего списка диалогов.')) return;
+    const threadId = dmThreadId(currentCid, otherCid);
+    try {
+        await setDoc(doc(db, 'dm_threads', threadId), { hiddenFor: { [currentCid]: true } }, { merge: true });
+        window.closeProfileModal();
+        window.closeDmChat();
+        activeThreadKind = null;
+        activeThreadId = null;
+    } catch (e) { console.error(e); alert('Не удалось удалить чат. Попробуйте ещё раз.'); }
+};
+
+/* ---------------- УПРАВЛЕНИЕ ГРУППОЙ (создатель группы + Основатель — в любой группе) ---------------- */
+window.renameGroupChat = async function(groupId) {
+    const g = groupThreadsCache.find(x => x.id === groupId) || activeGroupData;
+    if (!canManageGroup(g)) return;
+    const oldName = (g && g.name) || 'Группа';
+    const newNameRaw = prompt('Новое название группы:', oldName);
+    if (newNameRaw === null) return;
+    const newName = newNameRaw.trim();
+    if (!newName) { alert('Название не может быть пустым'); return; }
+    if (newName === oldName) return;
+
+    const nowIso = new Date().toISOString();
+    try {
+        await setDoc(doc(db, 'group_threads', groupId), {
+            name: newName,
+            lastMessage: `${currentName} переименовал(а) группу в «${newName}»`,
+            lastTimestamp: nowIso,
+            lastFrom: 'system'
+        }, { merge: true });
+        await addDoc(collection(db, 'group_threads', groupId, 'messages'), {
+            type: 'system', text: `${currentName} переименовал(а) группу в «${newName}»`, timestamp: nowIso, from: null
+        });
+    } catch (e) { console.error(e); alert('Не удалось переименовать группу. Попробуйте ещё раз.'); }
+};
+
+window.removeGroupMember = async function(groupId, cid) {
+    const g = groupThreadsCache.find(x => x.id === groupId) || activeGroupData;
+    if (!canManageGroup(g)) return;
+    const nm = (g && g.names && g.names[cid]) || ('CID ' + cid);
+    if (!confirm(`Удалить ${nm} из группы?`)) return;
+
+    const nowIso = new Date().toISOString();
+    try {
+        await setDoc(doc(db, 'group_threads', groupId), {
+            members: arrayRemove(cid),
+            lastMessage: `${currentName} удалил(а) из группы: ${nm}`,
+            lastTimestamp: nowIso,
+            lastFrom: 'system'
+        }, { merge: true });
+        await addDoc(collection(db, 'group_threads', groupId, 'messages'), {
+            type: 'system', text: `${currentName} удалил(а) из группы: ${nm}`, timestamp: nowIso, from: null
+        });
+    } catch (e) { console.error(e); alert('Не удалось удалить участника. Попробуйте ещё раз.'); }
+};
+
+window.openAddMembersPicker = function(groupId) {
+    const g = groupThreadsCache.find(x => x.id === groupId) || activeGroupData;
+    if (!canManageGroup(g)) return;
+    window.closeProfileModal();
+    pickerMode = 'addMembers';
+    addMembersTargetGroupId = groupId;
+    pickerSelected = new Set();
+    document.getElementById('pickerModalTitle').textContent = 'Добавить участников';
+    document.getElementById('groupNameInput').style.display = 'none';
+    const confirmBtn = document.getElementById('pickerConfirmBtn');
+    confirmBtn.style.display = 'block';
+    confirmBtn.textContent = 'Добавить';
+    document.getElementById('pickerSearchInput').value = '';
+    window.renderPickerList();
+    document.getElementById('pickerModal').classList.add('open');
+};
+
+window.confirmAddMembers = async function() {
+    if (pickerSelected.size === 0) { alert('Выберите хотя бы одного участника'); return; }
+    const groupId = addMembersTargetGroupId;
+    const g = groupThreadsCache.find(x => x.id === groupId);
+    if (!g || !canManageGroup(g)) { window.closePickerModal(); return; }
+
+    const newCids = Array.from(pickerSelected);
+    const namesUpdate = {};
+    newCids.forEach(cid => {
+        const p = allPilots.find(x => x.cid.toString() === cid.toString());
+        namesUpdate[cid] = p ? p.name : ('CID ' + cid);
+    });
+    const addedNames = newCids.map(cid => namesUpdate[cid]).join(', ');
+    const nowIso = new Date().toISOString();
+    const unreadPatch = {};
+    newCids.forEach(cid => { unreadPatch[cid] = true; });
+
+    try {
+        await setDoc(doc(db, 'group_threads', groupId), {
+            members: arrayUnion(...newCids),
+            names: { ...(g.names || {}), ...namesUpdate },
+            unread: { ...(g.unread || {}), ...unreadPatch },
+            lastMessage: `${currentName} добавил(а) в группу: ${addedNames}`,
+            lastTimestamp: nowIso,
+            lastFrom: 'system'
+        }, { merge: true });
+        await addDoc(collection(db, 'group_threads', groupId, 'messages'), {
+            type: 'system', text: `${currentName} добавил(а) в группу: ${addedNames}`, timestamp: nowIso, from: null
+        });
+        window.closePickerModal();
+    } catch (e) { console.error(e); alert('Не удалось добавить участников. Попробуйте ещё раз.'); }
+};
+
+window.leaveGroupChat = async function(groupId) {
+    if (!confirm('Выйти из этой группы?')) return;
+    const nowIso = new Date().toISOString();
+    try {
+        await addDoc(collection(db, 'group_threads', groupId, 'messages'), {
+            type: 'system', text: `${currentName} вышел(а) из группы`, timestamp: nowIso, from: null
+        });
+        await setDoc(doc(db, 'group_threads', groupId), {
+            members: arrayRemove(currentCid),
+            lastMessage: `${currentName} вышел(а) из группы`,
+            lastTimestamp: nowIso,
+            lastFrom: 'system'
+        }, { merge: true });
+        window.closeProfileModal();
+        window.closeDmChat();
+        activeThreadKind = null;
+        activeThreadId = null;
+    } catch (e) { console.error(e); alert('Не удалось выйти из группы. Попробуйте ещё раз.'); }
+};
+
+/* ---------------- КНОПКА "+": НОВЫЙ ДИАЛОГ / НОВАЯ ГРУППА ---------------- */
+window.toggleFabMenu = function(e) {
+    e.stopPropagation();
+    document.getElementById('dmFabMenu').classList.toggle('show');
+};
+document.addEventListener('click', () => {
+    document.getElementById('dmFabMenu')?.classList.remove('show');
+});
+
+window.openNewDialogPicker = function() {
+    document.getElementById('dmFabMenu').classList.remove('show');
+    pickerMode = 'dialog';
+    pickerSelected = new Set();
+    document.getElementById('pickerModalTitle').textContent = 'Новый диалог';
+    document.getElementById('groupNameInput').style.display = 'none';
+    document.getElementById('pickerConfirmBtn').style.display = 'none';
+    document.getElementById('pickerSearchInput').value = '';
+    window.renderPickerList();
+    document.getElementById('pickerModal').classList.add('open');
+};
+
+window.openNewGroupPicker = function() {
+    document.getElementById('dmFabMenu').classList.remove('show');
+    pickerMode = 'group';
+    pickerSelected = new Set();
+    document.getElementById('pickerModalTitle').textContent = 'Новая группа';
+    document.getElementById('groupNameInput').style.display = 'block';
+    document.getElementById('groupNameInput').value = '';
+    const confirmBtn = document.getElementById('pickerConfirmBtn');
+    confirmBtn.style.display = 'block';
+    confirmBtn.textContent = 'Создать группу';
+    document.getElementById('pickerSearchInput').value = '';
+    window.renderPickerList();
+    document.getElementById('pickerModal').classList.add('open');
+};
+
+window.closePickerModal = function() {
+    document.getElementById('pickerModal').classList.remove('open');
+    if (pickerMode === 'addMembers') addMembersTargetGroupId = null;
+};
+
+window.pickerConfirmAction = function() {
+    if (pickerMode === 'group') return window.confirmCreateGroup();
+    if (pickerMode === 'addMembers') return window.confirmAddMembers();
+};
+
+window.renderPickerList = function() {
+    const listEl = document.getElementById('pickerList');
+    const searchVal = (document.getElementById('pickerSearchInput').value || '').trim().toLowerCase();
+    let candidates = allPilots.filter(p => p.cid.toString() !== currentCid.toString());
+    if (pickerMode === 'addMembers' && addMembersTargetGroupId) {
+        const g = groupThreadsCache.find(x => x.id === addMembersTargetGroupId);
+        const existing = new Set((g && g.members || []).map(c => c.toString()));
+        candidates = candidates.filter(p => !existing.has(p.cid.toString()));
+    }
+    const filtered = searchVal
+        ? candidates.filter(p => (p.name || '').toLowerCase().includes(searchVal) || p.cid.toString().includes(searchVal))
+        : candidates;
+
+    if (!filtered.length) {
+        listEl.innerHTML = `<div class="picker-empty">Никого не нашлось</div>`;
+        return;
+    }
+
+    const multiSelect = pickerMode === 'group' || pickerMode === 'addMembers';
+    listEl.innerHTML = filtered.map(p => {
+        const selected = pickerSelected.has(p.cid.toString());
+        return `
+            <div class="picker-item ${multiSelect && selected ? 'selected' : ''}" onclick="window.pickPilot('${p.cid}', '${(p.name || '').replace(/'/g, "\\'")}')">
+                <div class="picker-item-avatar">${avatarCircleHtml(p.cid, p.name)}</div>
+                <div class="picker-item-name">${escapeHtml(p.name || ('CID ' + p.cid))} <span>(${escapeHtml(p.cid)})</span></div>
+                ${multiSelect ? `<div class="picker-item-check">${selected ? '✓' : ''}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+};
+
+window.pickPilot = function(cid, name) {
+    if (pickerMode === 'dialog') {
+        window.closePickerModal();
+        window.switchCabTab('messenger');
+        window.openDmThread(cid, name);
+    } else if (pickerMode === 'group' || pickerMode === 'addMembers') {
+        const key = cid.toString();
+        if (pickerSelected.has(key)) pickerSelected.delete(key); else pickerSelected.add(key);
+        window.renderPickerList();
+    }
+};
+
+window.confirmCreateGroup = async function() {
+    const nameInput = document.getElementById('groupNameInput');
+    const groupName = (nameInput.value || '').trim();
+    if (!groupName) { alert('Введите название группы'); return; }
+    if (pickerSelected.size === 0) { alert('Выберите хотя бы одного участника'); return; }
+
+    const members = [currentCid, ...Array.from(pickerSelected)];
+    const names = { [currentCid]: currentName };
+    members.forEach(cid => {
+        if (cid === currentCid) return;
+        const p = allPilots.find(x => x.cid.toString() === cid.toString());
+        names[cid] = p ? p.name : ('CID ' + cid);
+    });
+
+    const nowIso = new Date().toISOString();
+    const unreadInit = {};
+    members.forEach(cid => { unreadInit[cid] = cid !== currentCid; });
+
+    const groupData = {
+        name: groupName, members, names, createdBy: currentCid, createdAt: nowIso,
+        lastMessage: `Группа «${groupName}» создана`, lastTimestamp: nowIso, lastFrom: 'system',
+        unread: unreadInit
+    };
+
+    try {
+        const groupRef = await addDoc(collection(db, 'group_threads'), groupData);
+        await addDoc(collection(db, 'group_threads', groupRef.id, 'messages'), {
+            type: 'system', text: `${currentName} создал(а) группу «${groupName}»`, timestamp: nowIso, from: null
+        });
+
+        // Кладём группу в локальный кэш сразу, чтобы не ждать onSnapshot
+        groupThreadsCache = [{ id: groupRef.id, ...groupData }, ...groupThreadsCache.filter(g => g.id !== groupRef.id)];
+        rebuildCombinedList();
+
+        window.closePickerModal();
+        window.switchCabTab('messenger');
+        window.openGroupThread(groupRef.id);
+    } catch (e) {
+        console.error(e);
+        alert('Не удалось создать группу. Попробуйте ещё раз.');
+    }
+};
+
+function escapeHtml(str) {
+    return (str || '').toString().replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+</script>
+</body>
+</html>

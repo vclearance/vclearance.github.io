@@ -1,0 +1,27 @@
+name: VATSIM Background Tracker
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: 
+  repository_dispatch: # Обязательно добавьте эту строчку
+    types: [run-tracker]
+
+jobs:
+  check-flights:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Tracker
+        run: npm start

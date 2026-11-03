@@ -1,0 +1,1295 @@
+---
+layout: none
+---
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Админ-панель | vClearance</title>
+<link rel="icon" href="https://i.imgur.com/cXXk9hl.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+<style>
+    body { background:var(--bg); min-height:100vh; }
+
+    /* ---------- Экран входа ---------- */
+    #loginGate { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+    #loginGate .gate-box { width:100%; max-width:380px; background:var(--panel); border:1px solid var(--line-2); border-top:2px solid var(--red); padding:28px 28px 30px; }
+    #loginGate .gate-logo { margin-bottom:22px; }
+    #loginGate .gate-logo img { height:40px; width:auto; display:block; }
+    #loginGate h1 { font-family:var(--cond); font-size:26px; font-weight:600; color:var(--text); margin-bottom:4px; }
+    #loginGate p.sub { font-size:13px; color:var(--text-3); margin-bottom:22px; }
+
+    /* ---------- Каркас ---------- */
+    #dashApp { display:none; min-height:100vh; }
+    .admin-shell { display:flex; min-height:100vh; }
+    .admin-sidebar { width:232px; flex-shrink:0; background:var(--bg-alt); border-right:1px solid var(--line); display:flex; flex-direction:column; position:sticky; top:0; height:100vh; }
+    .admin-sidebar .brand { display:flex; align-items:center; gap:12px; height:var(--header-h); padding:0 20px; border-bottom:1px solid var(--line); }
+    .admin-sidebar .brand img { height:26px; width:auto; display:block; }
+    .admin-sidebar .brand span { font-family:var(--cond); font-size:16px; font-weight:600; color:var(--text); padding-left:12px; border-left:1px solid var(--line-2); }
+    .admin-role-pill { font-size:12px; color:var(--text-3); padding:14px 20px; border-bottom:1px solid var(--line); }
+    .admin-role-pill strong { color:var(--green); font-weight:600; }
+    .side-tab {
+        display:flex; align-items:center; gap:10px; padding:12px 20px; font-size:14px; font-weight:500;
+        color:var(--text-3); cursor:pointer; user-select:none; border-left:2px solid transparent; border-bottom:1px solid var(--line);
+        transition:color .15s, background .15s;
+    }
+    .side-tab:hover { background:var(--panel); color:var(--text); }
+    .side-tab.active { background:var(--panel); color:var(--text); border-left-color:var(--green); }
+    .side-tab .badge { margin-left:auto; width:8px; height:8px; background:var(--red); font-size:0; display:none; }
+    .side-tab .badge.show { display:inline-block; }
+    .admin-sidebar .spacer { flex:1; }
+    .side-link { display:block; padding:12px 20px; font-size:13px; color:var(--text-3); text-decoration:none; border-top:1px solid var(--line); }
+    .side-link:hover { color:var(--text); }
+    .logout-link { display:block; padding:12px 20px; font-size:13px; font-weight:500; color:var(--red); cursor:pointer; border-top:1px solid var(--line); }
+    .logout-link:hover { background:var(--red-bg); }
+
+    .admin-main { flex:1; min-width:0; padding:32px 36px 56px; max-width:1240px; }
+    .pane { display:none; }
+    .pane.active { display:block; }
+    .pane-head { display:flex; justify-content:space-between; align-items:center; gap:16px; padding-bottom:20px; margin-bottom:24px; border-bottom:1px solid var(--line); }
+    .pane-head .pane-title { margin:0; padding:0; border:none; }
+    .pane-title { font-family:var(--cond); font-size:32px; font-weight:600; line-height:1.1; color:var(--text); padding-bottom:20px; margin-bottom:24px; border-bottom:1px solid var(--line); }
+
+    /* ---------- Аналитика ---------- */
+    .stat-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); margin-bottom:24px; }
+    .stat-box { background:var(--bg); padding:16px 18px; }
+    .stat-box h4 { font-size:12px; font-weight:500; color:var(--text-3); margin-bottom:6px; }
+    .stat-box .num { font-family:var(--mono); font-size:32px; font-weight:500; line-height:1.1; color:var(--green); }
+    .grid-2 { display:grid; grid-template-columns:1.4fr 1fr; gap:24px; align-items:start; }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns:1fr; } }
+    .card { background:var(--bg); border:1px solid var(--line); padding:0; margin-bottom:24px; }
+    .card h3 { font-family:var(--cond); font-size:17px; font-weight:600; color:var(--text); padding:12px 16px; border-bottom:1px solid var(--line); background:var(--panel-2); }
+    .card-pad { padding:16px; }
+    .scroll-area { max-height:420px; overflow-y:auto; }
+    .scroll-area-tall { max-height:600px; }
+    .card .roster-table { min-width:100%; }
+    .top-row { display:flex; align-items:center; padding:9px 16px; border-bottom:1px solid var(--line); font-size:13.5px; }
+    .top-row:last-child { border-bottom:none; }
+    .top-row .rank { width:24px; font-family:var(--mono); color:var(--text-4); font-size:12px; }
+    .top-row:nth-child(1) .rank { color:var(--gold); }
+    .top-row:nth-child(2) .rank { color:#bdc3c7; }
+    .top-row:nth-child(3) .rank { color:#e67e22; }
+    .top-row .name { flex:1; margin-left:4px; color:var(--text); }
+    .top-row .name small { font-family:var(--mono); color:var(--text-4); font-size:11px; }
+    .top-row .cnt { font-family:var(--mono); color:var(--green); font-weight:500; }
+
+    /* ---------- Участники ---------- */
+    .add-form { display:flex; gap:0; flex-wrap:wrap; }
+    .add-form input {
+        flex:1; min-width:180px; height:38px; background:var(--bg); border:1px solid var(--line-2); border-right:none;
+        color:var(--text); padding:0 12px; font-size:14px; outline:none; transition:border-color .15s;
+    }
+    .add-form input::placeholder { color:var(--text-4); }
+    .add-form input:focus { border-color:var(--green); }
+    .add-form button { height:38px; white-space:nowrap; background:var(--green); color:#04140a; border:1px solid var(--green); padding:0 18px; font-weight:600; font-size:14px; }
+    .add-form button:hover { background:#29b866; }
+    .mini-btn { height:26px; padding:0 9px; font-size:12px; font-weight:500; margin-right:4px; background:transparent; border:1px solid; }
+    .mini-btn.green { color:var(--green); border-color:var(--green-line); }
+    .mini-btn.green:hover { background:var(--green-bg); }
+    .mini-btn.red { color:var(--red); border-color:var(--red-line); }
+    .mini-btn.red:hover { background:var(--red-bg); }
+    .mini-btn.blue { color:var(--blue); border-color:var(--blue-line); }
+    .mini-btn.blue:hover { background:var(--blue-bg); }
+
+    /* ---------- Чат ---------- */
+    .chat-shell { display:flex; align-items:stretch; border:1px solid var(--line); background:var(--bg); min-height:520px; }
+    .chat-threads { width:280px; border-right:1px solid var(--line); flex-shrink:0; }
+    .chat-threads-header { display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:44px; border-bottom:1px solid var(--line); background:var(--panel-2); }
+    .chat-threads-header span { font-family:var(--cond); font-size:16px; font-weight:600; color:var(--text); }
+    .chat-threads-header label { font-size:12px; color:var(--text-3); display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; }
+    .chat-threads-header input[type="checkbox"] { width:14px; height:14px; margin:0; accent-color:var(--green); }
+    .chat-thread-item { padding:11px 16px; border-bottom:1px solid var(--line); border-left:2px solid transparent; cursor:pointer; }
+    .chat-thread-item:hover { background:var(--panel); }
+    .chat-thread-item.active { background:var(--panel); border-left-color:var(--green); }
+    .chat-thread-item.archived { opacity:.5; }
+    .chat-thread-item .t-name { font-size:14px; font-weight:600; color:var(--text); display:flex; justify-content:space-between; align-items:center; }
+    .chat-thread-item .t-preview { font-size:12.5px; color:var(--text-3); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .chat-thread-item .t-dot { width:8px; height:8px; background:var(--red); display:none; }
+    .chat-thread-item .t-dot.show { display:inline-block; }
+    .chat-empty { display:flex; align-items:center; justify-content:center; min-height:260px; color:var(--text-4); font-size:13px; flex-direction:column; flex:1; }
+    .chat-conv { flex:1; display:flex; flex-direction:column; min-width:0; }
+    .chat-conv-header { display:flex; align-items:center; gap:10px; height:44px; padding:0 16px; border-bottom:1px solid var(--line); background:var(--panel-2); font-size:14px; font-weight:600; color:var(--text); }
+    .chat-conv-header span { font-family:var(--mono); font-weight:400; color:var(--text-3); font-size:12px; }
+    .chat-msgs { flex:1; padding:16px; display:flex; flex-direction:column; gap:8px; }
+    .msg { max-width:70%; padding:8px 12px; font-size:13.5px; line-height:1.5; }
+    .msg.user { align-self:flex-start; background:var(--panel-3); color:var(--text); border-left:2px solid var(--line-2); }
+    .msg.admin { align-self:flex-end; background:#163a26; color:#eafff0; border-right:2px solid var(--green); }
+    .msg .cat { display:inline-block; font-family:var(--mono); font-size:10.5px; opacity:.7; margin-bottom:3px; }
+    .msg .replier { display:block; font-size:11px; font-weight:600; color:#7fffa8; margin-bottom:3px; }
+    .msg .ts { display:block; font-family:var(--mono); font-size:10.5px; opacity:.5; margin-top:4px; }
+    .chat-input-row { display:flex; gap:0; padding:12px 16px; border-top:1px solid var(--line); align-items:stretch; }
+    .chat-input-row textarea {
+        flex:1; resize:none; min-height:40px; max-height:140px; overflow-y:auto;
+        background:var(--bg); border:1px solid var(--line-2); border-right:none; color:var(--text);
+        font-size:14px; line-height:1.5; padding:9px 12px; outline:none; transition:border-color .15s;
+    }
+    .chat-input-row textarea::placeholder { color:var(--text-4); }
+    .chat-input-row textarea:focus { border-color:var(--green); }
+    .chat-input-row button { width:52px; height:auto; border:1px solid var(--green) !important; color:#04140a !important; font-weight:600; }
+
+    @media (max-width: 900px) {
+        .admin-shell { flex-direction:column; }
+        .admin-sidebar { width:100%; height:auto; position:static; flex-direction:row; flex-wrap:wrap; border-right:none; border-bottom:1px solid var(--line); }
+        .admin-sidebar .brand { width:100%; }
+        .admin-role-pill { width:100%; }
+        .side-tab { flex:1 1 auto; justify-content:center; padding:10px 12px; border-left:none; border-bottom:2px solid transparent; border-right:1px solid var(--line); }
+        .side-tab.active { border-bottom-color:var(--green); border-left-color:transparent; }
+        .admin-sidebar .spacer { display:none; }
+        .side-link, .logout-link { flex:1; text-align:center; }
+        .admin-main { padding:24px 18px 48px; }
+        .chat-shell { flex-direction:column; }
+        .chat-threads { width:100%; border-right:none; border-bottom:1px solid var(--line); }
+    }
+</style>
+</head>
+<body>
+
+    <div id="loginGate">
+        <div class="gate-box">
+            <div class="gate-logo"><img src="https://i.imgur.com/cXXk9hl.png" alt="vClearance"></div>
+            <h1>Панель управления</h1>
+            <p class="sub">Введите VATSIM CID и пароль администратора</p>
+            <div class="profile-login-form">
+                <input type="text" id="gateCid" placeholder="VATSIM CID" autocomplete="off">
+                <input type="password" id="gatePassword" placeholder="Пароль администратора" autocomplete="off" onkeydown="if(event.key==='Enter') doLogin();">
+                <button onclick="doLogin()">Войти</button>
+                <div id="gateError" class="form-error" style="display:none;">Неверный VATSIM CID или пароль!</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashApp">
+        <div class="admin-shell">
+            <div class="admin-sidebar">
+                <div class="brand"><img src="https://i.imgur.com/cXXk9hl.png" alt=""><span>vClearance</span></div>
+                <div class="admin-role-pill">Вы вошли как <strong id="roleLabel">—</strong></div>
+
+                <div class="side-tab active" data-tab="analytics" data-role-restricted="1" onclick="switchTab('analytics')">Аналитика</div>
+                <div class="side-tab" data-tab="members" data-role-restricted="1" onclick="switchTab('members')">Участники</div>
+                <div class="side-tab" data-tab="chat" data-role-restricted="1" onclick="switchTab('chat')">Чат <span class="badge" id="chatBadge">•</span></div>
+                <div class="side-tab" data-tab="audit" data-role-restricted="1" onclick="switchTab('audit')">Аудит</div>
+                <div class="side-tab" data-tab="events" data-role-restricted="1" onclick="switchTab('events')">Ивенты</div>
+                <div class="side-tab" data-tab="liveries" onclick="switchTab('liveries')">Ливреи</div>
+
+                <div class="spacer"></div>
+                <a href="{{ '/' | relative_url }}" class="side-link">На сайт</a>
+                <div class="logout-link" onclick="doLogout()">Выйти из панели</div>
+            </div>
+
+            <div class="admin-main">
+
+                <!-- ===== Аналитика ===== -->
+                <div class="pane active" id="pane-analytics">
+                    <div class="pane-title">Аналитика</div>
+                    <div class="stat-row">
+                        <div class="stat-box"><h4>Сегодня</h4><div class="num" id="statToday">0</div></div>
+                        <div class="stat-box"><h4>За неделю</h4><div class="num" id="statWeek">0</div></div>
+                        <div class="stat-box"><h4>За все время</h4><div class="num" id="statAll">0</div></div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3>Журнал вылетов за клиренс</h3>
+                            <div class="scroll-area">
+                                <table class="roster-table roster-table-compact">
+                                    <thead><tr><th>Дата</th><th>Пилот</th><th>Маршрут</th></tr></thead>
+                                    <tbody id="flightLogBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3>Топ активных</h3>
+                            <div class="scroll-area" id="topPilotsBox"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Участники ===== -->
+                <div class="pane" id="pane-members">
+                    <div class="pane-title">Управление участниками</div>
+                    <div class="card">
+                        <h3>Добавить участника</h3>
+                        <div class="add-form card-pad">
+                            <input type="text" id="newCid" placeholder="VATSIM CID">
+                            <input type="text" id="newName" placeholder="Имя и фамилия">
+                            <button onclick="addParticipant()">Добавить</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Ростер</h3>
+                        <div class="scroll-area">
+                            <table class="roster-table roster-table-compact">
+                                <thead><tr><th>Пилот / CID</th><th>Клиренс-вылеты</th><th>Пароль</th><th>Действия</th></tr></thead>
+                                <tbody id="membersBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Чат ===== -->
+                <div class="pane" id="pane-chat">
+                    <div class="pane-title">Чат с участниками</div>
+                    <div class="chat-shell">
+                        <div class="chat-threads">
+                            <div class="chat-threads-header">
+                                <span>Диалоги</span>
+                                <label><input type="checkbox" id="toggleArchived" onchange="renderThreadsList()"> Архив</label>
+                            </div>
+                            <div id="chatThreadsList"></div>
+                        </div>
+                        <div class="chat-conv" id="chatConvBox">
+                            <div class="chat-empty">Выберите переписку слева</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Аудит ===== -->
+                <div class="pane" id="pane-audit">
+                    <div class="pane-head">
+                        <div class="pane-title">Журнал аудита</div>
+                        <label class="check-label">
+                            <input type="checkbox" id="toggleSystemLogs" onchange="toggleSystemLogs(this.checked)">
+                            Показать системные сообщения
+                        </label>
+                    </div>
+                    <div class="card">
+                        <div class="scroll-area scroll-area-tall">
+                            <table class="roster-table roster-table-compact">
+                                <thead><tr><th>Дата</th><th>Админ (CID)</th><th>Действие</th></tr></thead>
+                                <tbody id="audit-tbody">
+                                    <tr><td colspan="3" class="empty-cell">Загрузка данных...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Ивенты ===== -->
+                <div class="pane" id="pane-events">
+                    <div class="pane-head">
+                        <div class="pane-title">Ивенты</div>
+                        <button class="btn-action" onclick="openAddEventModal()">+ Добавить ивент</button>
+                    </div>
+                    <div class="card">
+                        <div id="eventsListBody" class="scroll-area scroll-area-tall">
+                            <div class="empty-row">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Ливреи ===== -->
+                <div class="pane" id="pane-liveries">
+                    <div class="pane-head">
+                        <div class="pane-title">Ливреи</div>
+                        <button class="btn-action" onclick="window.openAddLiveryModal()">+ Добавить ливрею</button>
+                    </div>
+                    <div class="card">
+                        <div id="liveriesListBody" class="scroll-area scroll-area-tall">
+                            <div class="empty-row">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Модалка добавления/редактирования ливреи ===== -->
+    <div class="modal" id="addLiveryModal">
+        <div class="modal-content modal-md">
+            <button class="close-modal-btn" onclick="window.closeLiveryModal()">&times;</button>
+            <div class="modal-header" id="liveryModalHeader">Добавить ливрею</div>
+            <div class="modal-body">
+                <div class="profile-login-form">
+                    <label class="field-label">Фото (ссылка на изображение)</label>
+                    <input type="text" id="liveryImg" placeholder="https://i.imgur.com/...">
+                    <label class="field-label">Модель (например, PMDG 737-800, Fenix A320)</label>
+                    <input type="text" id="liveryAircraft" placeholder="Например, PMDG 737-800">
+                    <label class="field-label">Название ливреи</label>
+                    <input type="text" id="liveryTitle" placeholder="Например, Aeroflot Retro">
+                    <label class="field-label">Источники скачивания</label>
+                    <div id="liverySourcesContainer"></div>
+                    <button type="button" class="add-source-btn" onclick="window.addLiverySourceRow()">+ Добавить источник</button>
+                    <label class="check-label">
+                        <input type="checkbox" id="liveryOutdated"> Пометить как устаревшую
+                    </label>
+                    <button class="btn-confirm" onclick="window.submitLivery()" id="liverySubmitBtn">Опубликовать ливрею</button>
+                    <div id="liveryFormError" class="form-error" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Модалка добавления/редактирования ивента ===== -->
+    <div class="modal" id="addEventModal">
+        <div class="modal-content modal-md">
+            <button class="close-modal-btn" onclick="closeEventModal()">&times;</button>
+            <div class="modal-header" id="eventModalHeader">Создать мероприятие</div>
+            <div class="modal-body">
+                <div class="profile-login-form">
+                    <label class="field-label">Дата и время</label>
+                    <input type="datetime-local" id="eventDate">
+
+                    <label class="field-label">Обложка (ссылка на картинку 16:9)</label>
+                    <input type="text" id="eventImg" placeholder="https://i.imgur.com/...">
+
+                    <label class="field-label">Заголовок</label>
+                    <input type="text" id="eventTitle" placeholder="Заголовок ивента">
+
+                    <label class="field-label">Маршрут</label>
+                    <input type="text" id="eventRoute" placeholder="Маршрут рейса (например, UUEE — URSS)">
+
+                    <label class="field-label">Описание</label>
+                    <textarea id="eventDesc" placeholder="Полное описание и регламент проведения мероприятия..."></textarea>
+
+                    <button class="btn-confirm" onclick="submitEvent()" id="eventSubmitBtn">Опубликовать ивент</button>
+                    <div id="eventFormError" class="form-error" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import {
+    getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, getDocs, collection, onSnapshot,
+    query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCa2nr-heFF5LqoqN_tPYGJpf9PGhqMydo",
+    authDomain: "vclearance-15b43.firebaseapp.com",
+    projectId: "vclearance-15b43",
+    storageBucket: "vclearance-15b43.firebasestorage.app",
+    messagingSenderId: "299361728910",
+    appId: "1:299361728910:web:7e77b2f4431db23a66ccdf"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const BASE_PILOTS = [{ cid: "1816284", name: "Karim I." }];
+let MY_PILOTS = [...BASE_PILOTS];
+let flightsData = [];      // все clearance-вылеты (recent_flights)
+let adminsMap = {};        // cid -> role
+let pilotAuthMap = {};     // cid -> true, если пилоту уже выдан пароль
+let currentRole = null;    // 'founder' | 'admin' | 'liverymaker'
+let currentCid = null;
+let allLiveries = [];
+let editingLiveryId = null;
+let allEvents = [];
+let editingEventId = null;
+let currentAuditDocs = null;
+let unsubAuditLogs = null;
+let showSystemLogs = false;
+
+function roleLabelRu(role) {
+    if (role === 'founder') return 'Основатель';
+    if (role === 'liverymaker') return 'Ливери-мейкер';
+    return 'Администратор';
+}
+
+const SESSION_KEY = 'vc_admin_session'; // localStorage — сохраняется между визитами,
+                                         // поэтому вход запоминается и не запрашивается заново при каждом открытии страницы
+
+/* ---------------- ВХОД ---------------- */
+async function tryLogin(cid, password) {
+    if (!cid || !password) return false;
+    try {
+        const snap = await getDoc(doc(db, 'admins', cid));
+        if (snap.exists() && snap.data().password === password) {
+            const rawRole = snap.data().role;
+            currentRole = (rawRole === 'founder' || rawRole === 'liverymaker') ? rawRole : 'admin';
+            currentCid = cid;
+            return true;
+        }
+    } catch (e) { console.error(e); }
+    return false;
+}
+
+window.doLogin = async function() {
+    const cid = document.getElementById('gateCid').value.trim();
+    const password = document.getElementById('gatePassword').value;
+    const errDiv = document.getElementById('gateError');
+    errDiv.style.display = 'none';
+    if (!cid || !password) return;
+
+    const ok = await tryLogin(cid, password);
+    if (ok) {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ cid, password }));
+        enterDashboard();
+        return;
+    }
+    errDiv.textContent = 'Неверный VATSIM CID или пароль!';
+    errDiv.style.display = 'block';
+};
+
+window.doLogout = function() {
+    localStorage.removeItem(SESSION_KEY);
+    location.reload();
+};
+
+function enterDashboard() {
+    document.getElementById('loginGate').style.display = 'none';
+    document.getElementById('dashApp').style.display = 'block';
+    document.getElementById('roleLabel').textContent = roleLabelRu(currentRole);
+    applyRoleVisibility();
+    initData();
+}
+
+// Ливери-мейкер видит только раздел "Ливреи" — остальные вкладки скрыты,
+// полные администраторы и Основатель видят всё, включая "Ливреи".
+function applyRoleVisibility() {
+    const isLiveryOnly = currentRole === 'liverymaker';
+    document.querySelectorAll('.side-tab[data-role-restricted]').forEach(el => {
+        el.style.display = isLiveryOnly ? 'none' : 'flex';
+    });
+    switchTab(isLiveryOnly ? 'liveries' : 'analytics');
+}
+
+// При открытии страницы пробуем восстановить сохранённый вход из localStorage,
+// заново проверяя CID+пароль в Firebase (на случай, если пароль был сменён/отозван).
+(async function boot() {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return;
+    try {
+        const { cid, password } = JSON.parse(raw);
+        const ok = await tryLogin(cid, password);
+        if (ok === true) {
+            enterDashboard();
+        } else {
+            localStorage.removeItem(SESSION_KEY);
+        }
+    } catch (e) {
+        localStorage.removeItem(SESSION_KEY);
+    }
+})();
+
+/* ---------------- ДАННЫЕ ---------------- */
+function initData() {
+    listenToLiveries();
+
+    if (currentRole === 'liverymaker') return; // остальные разделы ливери-мейкеру не нужны
+
+    onSnapshot(collection(db, 'custom_pilots'), snap => {
+        const custom = [];
+        snap.forEach(d => custom.push(d.data()));
+        MY_PILOTS = [...BASE_PILOTS, ...custom];
+        renderMembers();
+        renderAnalytics();
+    });
+
+    onSnapshot(collection(db, 'admins'), snap => {
+        const map = {};
+        snap.forEach(d => map[d.id] = d.data().role || 'admin');
+        adminsMap = map;
+        renderMembers();
+    });
+
+    onSnapshot(collection(db, 'pilot_auth'), snap => {
+        const map = {};
+        snap.forEach(d => { if (d.data().password) map[d.id] = true; });
+        pilotAuthMap = map;
+        renderMembers();
+    });
+
+    onSnapshot(query(collection(db, 'recent_flights'), orderBy('timestamp', 'desc')), snap => {
+        flightsData = snap.docs.map(d => d.data());
+        renderAnalytics();
+        renderMembers();
+    });
+
+    listenChatThreads();
+    listenToAuditLogs();
+    listenToEvents();
+}
+
+/* ---------------- ЖУРНАЛ АУДИТА (доступно Основателю и Админам, не Ливери-мейкеру) ---------------- */
+async function logAudit(action, details) {
+    if (!currentCid) return;
+    try {
+        await addDoc(collection(db, 'audit_logs'), {
+            timestamp: new Date().toISOString(),
+            adminCid: currentCid,
+            action: action,
+            details: details
+        });
+    } catch (e) { console.error('Ошибка записи в аудит:', e); }
+}
+
+function listenToAuditLogs() {
+    if (unsubAuditLogs) return; // уже подписаны — не плодим повторные слушатели
+    const q = query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'));
+    unsubAuditLogs = onSnapshot(q, snap => {
+        currentAuditDocs = snap;
+        renderAuditLogs();
+    }, e => console.error('Ошибка чтения журнала аудита:', e));
+}
+
+function stopListeningToAuditLogs() {
+    if (unsubAuditLogs) { unsubAuditLogs(); unsubAuditLogs = null; }
+    currentAuditDocs = null;
+}
+
+window.toggleSystemLogs = function(isChecked) {
+    showSystemLogs = isChecked;
+    renderAuditLogs();
+};
+
+function renderAuditLogs() {
+    const tbody = document.getElementById('audit-tbody');
+    if (!tbody || !currentAuditDocs) return;
+
+    if (currentAuditDocs.empty) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#666; padding:18px;">Журнал пуст</td></tr>`;
+        return;
+    }
+
+    let rows = '';
+    let renderedCount = 0;
+
+    currentAuditDocs.forEach(docSnap => {
+        const data = docSnap.data();
+
+        // Пропускаем системные сообщения, если галочка не стоит
+        const isSystemLog = data.adminCid === 'Система (Бот)';
+        if (isSystemLog && !showSystemLogs) return;
+
+        const logId = docSnap.id;
+        const dateStr = new Date(data.timestamp).toLocaleString('ru-RU', {
+            day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit'
+        });
+
+        // Удалять записи из журнала аудита может только Основатель.
+        const deleteBtnHtml = currentRole === 'founder'
+            ? `<button onclick="deleteAuditLog('${logId}')" style="background:rgba(231,76,60,0.15); color:#e74c3c; border:1px solid rgba(231,76,60,0.3); padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer; margin-left:8px;" title="Удалить лог">Удалить</button>`
+            : '';
+
+        const adminDisplay = isSystemLog
+            ? `<strong style="color:#3498db;">${escapeHtml(data.adminCid)}</strong>`
+            : `<strong style="color:#2ecc71;">${escapeHtml(data.adminCid)}</strong>`;
+
+        rows += `
+            <tr>
+                <td style="color:#aaa;">${dateStr}</td>
+                <td>${adminDisplay}</td>
+                <td>${escapeHtml(data.action)}: <span style="color:#ccc;">${escapeHtml(data.details)}</span>${deleteBtnHtml}</td>
+            </tr>
+        `;
+        renderedCount++;
+    });
+
+    tbody.innerHTML = rows || `<tr><td colspan="3" style="text-align:center; color:#666; padding:18px;">Нет записей для отображения</td></tr>`;
+}
+
+window.deleteAuditLog = async function(logId) {
+    if (currentRole !== 'founder') { alert('Удаление логов доступно только Основателю!'); return; }
+    if (!confirm('Вы уверены, что хотите удалить эту запись из логов?')) return;
+    try { await deleteDoc(doc(db, 'audit_logs', logId)); }
+    catch (e) { console.error('Ошибка при удалении лога:', e); alert('Не удалось удалить запись из логов.'); }
+};
+
+/* ---------------- ЛИВРЕИ (доступно Основателю, Админам и Ливери-мейкерам) ---------------- */
+function listenToLiveries() {
+    onSnapshot(collection(db, 'liveries'), snap => {
+        const liveries = [];
+        snap.forEach(d => liveries.push({ id: d.id, ...d.data() }));
+        liveries.sort((a, b) => (a.aircraft || '').localeCompare(b.aircraft || ''));
+        allLiveries = liveries;
+        renderLiveriesTab();
+    }, e => console.error('Ошибка чтения ливрей:', e));
+}
+
+function safeUrl(url) {
+    const u = (url || '').trim();
+    if (/^https?:\/\//i.test(u)) return u;
+    return '#';
+}
+
+function renderLiveriesTab() {
+    const list = document.getElementById('liveriesListBody');
+    if (!list) return;
+
+    if (allLiveries.length === 0) {
+        list.innerHTML = `<div style="text-align:center; color:#666; padding:18px; font-size:12px;">Ливреи пока не добавлены.</div>`;
+        return;
+    }
+
+    list.innerHTML = allLiveries.map(liv => {
+        const outdatedTag = liv.outdated ? ' <span style="color:#ff8080; font-weight:700;">[устар.]</span>' : '';
+        return `
+            <div class="livery-admin-row">
+                <span class="livery-admin-name">${escapeHtml(liv.title)} <span>(${escapeHtml(liv.aircraft)})</span>${outdatedTag}</span>
+                <div class="livery-admin-actions">
+                    <button class="livery-admin-btn edit" title="Изменить" onclick="window.openEditLiveryModal('${liv.id}')">✎</button>
+                    <button class="livery-admin-btn del" title="Удалить" onclick="window.deleteLivery('${liv.id}')">✕</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.addLiverySourceRow = function(text, link) {
+    const container = document.getElementById('liverySourcesContainer');
+    const row = document.createElement('div');
+    row.className = 'livery-source-row';
+    row.innerHTML = `
+        <input type="text" class="livery-source-text" placeholder="Текст (например, Скачать с сайта)" value="${escapeHtml(text || '')}">
+        <input type="text" class="livery-source-link" placeholder="https://..." value="${escapeHtml(link || '')}">
+        <button type="button" class="remove-source-btn" onclick="this.parentElement.remove()">✕</button>
+    `;
+    container.appendChild(row);
+};
+
+function resetLiveryForm() {
+    document.getElementById('liveryImg').value = '';
+    document.getElementById('liveryAircraft').value = '';
+    document.getElementById('liveryTitle').value = '';
+    document.getElementById('liverySourcesContainer').innerHTML = '';
+    document.getElementById('liveryOutdated').checked = false;
+    const errDiv = document.getElementById('liveryFormError');
+    if (errDiv) errDiv.style.display = 'none';
+    window.addLiverySourceRow();
+}
+
+window.openAddLiveryModal = function() {
+    editingLiveryId = null;
+    resetLiveryForm();
+    document.getElementById('liveryModalHeader').textContent = 'Добавить ливрею';
+    document.getElementById('liverySubmitBtn').textContent = 'Опубликовать ливрею';
+    document.getElementById('addLiveryModal').classList.add('open');
+};
+
+window.openEditLiveryModal = function(id) {
+    const liv = allLiveries.find(l => l.id === id);
+    if (!liv) return;
+
+    editingLiveryId = id;
+    document.getElementById('liveryImg').value = liv.img || '';
+    document.getElementById('liveryAircraft').value = liv.aircraft || '';
+    document.getElementById('liveryTitle').value = liv.title || '';
+
+    const container = document.getElementById('liverySourcesContainer');
+    container.innerHTML = '';
+    const sources = Array.isArray(liv.sources) && liv.sources.length > 0 ? liv.sources : [{ text: '', link: '' }];
+    sources.forEach(src => window.addLiverySourceRow(src.text, src.link));
+
+    document.getElementById('liveryOutdated').checked = !!liv.outdated;
+    const errDiv = document.getElementById('liveryFormError');
+    if (errDiv) errDiv.style.display = 'none';
+
+    document.getElementById('liveryModalHeader').textContent = 'Изменить ливрею';
+    document.getElementById('liverySubmitBtn').textContent = 'Сохранить изменения';
+    document.getElementById('addLiveryModal').classList.add('open');
+};
+
+window.closeLiveryModal = function() {
+    document.getElementById('addLiveryModal').classList.remove('open');
+    editingLiveryId = null;
+};
+
+window.submitLivery = async function() {
+    const img = document.getElementById('liveryImg').value.trim();
+    const aircraft = document.getElementById('liveryAircraft').value.trim();
+    const title = document.getElementById('liveryTitle').value.trim();
+    const errDiv = document.getElementById('liveryFormError');
+
+    if (!img || !aircraft || !title) {
+        if (errDiv) { errDiv.textContent = 'Заполните фото, модель и название ливреи!'; errDiv.style.display = 'block'; }
+        return;
+    }
+
+    const sources = [];
+    document.querySelectorAll('#liverySourcesContainer .livery-source-row').forEach(row => {
+        const text = row.querySelector('.livery-source-text').value.trim();
+        const link = row.querySelector('.livery-source-link').value.trim();
+        if (text && link) sources.push({ text, link });
+    });
+
+    const outdated = document.getElementById('liveryOutdated').checked;
+    const liveryData = { img, aircraft, title, sources, outdated, updatedAt: new Date().toISOString() };
+
+    try {
+        if (editingLiveryId) {
+            await setDoc(doc(db, 'liveries', editingLiveryId), liveryData, { merge: true });
+            await logAudit('Изменение ливреи', `${title} (${aircraft})`);
+        } else {
+            liveryData.addedAt = new Date().toISOString();
+            await addDoc(collection(db, 'liveries'), liveryData);
+            await logAudit('Добавление ливреи', `${title} (${aircraft})`);
+        }
+        window.closeLiveryModal();
+    } catch (error) {
+        console.error('Ошибка сохранения ливреи:', error);
+        if (errDiv) { errDiv.textContent = 'Произошла ошибка при сохранении. Попробуйте снова.'; errDiv.style.display = 'block'; }
+    }
+};
+
+window.deleteLivery = async function(id) {
+    const liv = allLiveries.find(l => l.id === id);
+    if (!liv) return;
+
+    if (confirm(`Удалить ливрею "${liv.title}" (${liv.aircraft})?`)) {
+        try {
+            await deleteDoc(doc(db, 'liveries', id));
+            await logAudit('Удаление ливреи', `${liv.title} (${liv.aircraft})`);
+        } catch (error) {
+            console.error('Ошибка удаления ливреи:', error);
+            alert('Произошла ошибка при удалении.');
+        }
+    }
+};
+
+/* ---------------- ИВЕНТЫ (доступно Основателю и Админам) ---------------- */
+function listenToEvents() {
+    onSnapshot(collection(db, 'events'), snap => {
+        const events = [];
+        snap.forEach(d => events.push({ id: d.id, ...d.data() }));
+        events.sort((a, b) => new Date(a.date) - new Date(b.date));
+        allEvents = events;
+        renderEventsTab();
+    }, e => console.error('Ошибка чтения ивентов:', e));
+}
+
+function renderEventsTab() {
+    const list = document.getElementById('eventsListBody');
+    if (!list) return;
+
+    if (allEvents.length === 0) {
+        list.innerHTML = `<div style="text-align:center; color:#666; padding:18px; font-size:12px;">Ивенты пока не добавлены.</div>`;
+        return;
+    }
+
+    const now = new Date();
+    list.innerHTML = allEvents.map(ev => {
+        const dateObj = new Date(ev.date);
+        const dateStr = dateObj.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+        const pastTag = dateObj < now ? ' <span style="color:#888; font-weight:700;">[прошёл]</span>' : '';
+        return `
+            <div class="livery-admin-row">
+                <span class="livery-admin-name">${escapeHtml(ev.title)} <span>(${escapeHtml(ev.route || '')})</span> · <span style="color:#666;">${dateStr}</span>${pastTag}</span>
+                <div class="livery-admin-actions">
+                    <button class="livery-admin-btn edit" title="Изменить" onclick="openEditEventModal('${ev.id}')">✎</button>
+                    <button class="livery-admin-btn del" title="Удалить" onclick="deleteEvent('${ev.id}')">✕</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function resetEventForm() {
+    document.getElementById('eventDate').value = '';
+    document.getElementById('eventImg').value = '';
+    document.getElementById('eventTitle').value = '';
+    document.getElementById('eventRoute').value = '';
+    document.getElementById('eventDesc').value = '';
+    const errDiv = document.getElementById('eventFormError');
+    if (errDiv) errDiv.style.display = 'none';
+}
+
+window.openAddEventModal = function() {
+    editingEventId = null;
+    resetEventForm();
+    document.getElementById('eventModalHeader').textContent = 'Создать мероприятие';
+    document.getElementById('eventSubmitBtn').textContent = 'Опубликовать ивент';
+    document.getElementById('addEventModal').classList.add('open');
+};
+
+window.openEditEventModal = function(id) {
+    const ev = allEvents.find(e => e.id === id);
+    if (!ev) return;
+
+    editingEventId = id;
+    // Дата хранится как локальное значение datetime-local + 'Z' — убираем 'Z' обратно для инпута.
+    document.getElementById('eventDate').value = (ev.date || '').replace(/Z$/, '').slice(0, 16);
+    document.getElementById('eventImg').value = ev.img || '';
+    document.getElementById('eventTitle').value = ev.title || '';
+    document.getElementById('eventRoute').value = ev.route || '';
+    document.getElementById('eventDesc').value = ev.desc || '';
+    const errDiv = document.getElementById('eventFormError');
+    if (errDiv) errDiv.style.display = 'none';
+
+    document.getElementById('eventModalHeader').textContent = 'Изменить мероприятие';
+    document.getElementById('eventSubmitBtn').textContent = 'Сохранить изменения';
+    document.getElementById('addEventModal').classList.add('open');
+};
+
+window.closeEventModal = function() {
+    document.getElementById('addEventModal').classList.remove('open');
+    editingEventId = null;
+};
+
+window.submitEvent = async function() {
+    const dateVal = document.getElementById('eventDate').value;
+    const img = document.getElementById('eventImg').value.trim();
+    const title = document.getElementById('eventTitle').value.trim();
+    const route = document.getElementById('eventRoute').value.trim();
+    const desc = document.getElementById('eventDesc').value.trim();
+    const errDiv = document.getElementById('eventFormError');
+
+    if (!dateVal || !title || !route || !desc) {
+        if (errDiv) { errDiv.textContent = 'Поля Дата, Заголовок, Маршрут и Описание обязательны к заполнению!'; errDiv.style.display = 'block'; }
+        return;
+    }
+
+    const date = dateVal + 'Z';
+    const eventData = { date, img, title, route, desc };
+
+    try {
+        if (editingEventId) {
+            await setDoc(doc(db, 'events', editingEventId), eventData, { merge: true });
+            await logAudit('Изменение ивента', `Название: "${title}", Маршрут: ${route}`);
+        } else {
+            eventData.addedAt = new Date().toISOString();
+            await addDoc(collection(db, 'events'), eventData);
+            await logAudit('Добавление ивента', `Название: "${title}", Маршрут: ${route}`);
+        }
+        window.closeEventModal();
+    } catch (error) {
+        console.error('Ошибка сохранения ивента:', error);
+        if (errDiv) { errDiv.textContent = 'Произошла ошибка при сохранении. Попробуйте снова.'; errDiv.style.display = 'block'; }
+    }
+};
+
+window.deleteEvent = async function(id) {
+    const ev = allEvents.find(e => e.id === id);
+    if (!ev) return;
+
+    if (confirm(`Удалить ивент "${ev.title}"?`)) {
+        try {
+            await deleteDoc(doc(db, 'events', id));
+            await logAudit('Удаление ивента', `Название: "${ev.title}"`);
+        } catch (error) {
+            console.error('Ошибка удаления ивента:', error);
+            alert('Произошла ошибка при удалении.');
+        }
+    }
+};
+
+/* ---------------- АНАЛИТИКА ---------------- */
+function renderAnalytics() {
+    const now = Date.now();
+    const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
+    const msWeek = 7 * 24 * 60 * 60 * 1000;
+
+    let cToday = 0, cWeek = 0;
+    flightsData.forEach(f => {
+        const t = new Date(f.timestamp).getTime();
+        if (t >= startOfToday) cToday++;
+        if (now - t <= msWeek) cWeek++;
+    });
+    document.getElementById('statToday').textContent = cToday;
+    document.getElementById('statWeek').textContent = cWeek;
+    document.getElementById('statAll').textContent = flightsData.length;
+
+    document.getElementById('flightLogBody').innerHTML = flightsData.slice(0, 200).map(f => `
+        <tr>
+            <td style="color:#aaa;">${new Date(f.timestamp).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</td>
+            <td><strong>${escapeHtml(f.name || '')}</strong> <span style="color:#666;">(${f.cid})</span></td>
+            <td>${escapeHtml(f.route || '---')}</td>
+        </tr>
+    `).join('') || `<tr><td colspan="3" style="text-align:center; color:#666; padding:18px;">Пока нет вылетов</td></tr>`;
+
+    const counts = {};
+    flightsData.forEach(f => { if (f.cid) counts[f.cid.toString()] = (counts[f.cid.toString()] || 0) + 1; });
+    const top = Object.entries(counts)
+        .map(([cid, count]) => {
+            const p = MY_PILOTS.find(p => p.cid.toString() === cid);
+            return { cid, name: p ? p.name : 'Неизвестный', count };
+        })
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 15);
+
+    document.getElementById('topPilotsBox').innerHTML = top.map((p, i) => `
+        <div class="top-row">
+            <div class="rank">${i + 1}</div>
+            <div class="name">${escapeHtml(p.name)} <small>(${p.cid})</small></div>
+            <div class="cnt">${p.count}</div>
+        </div>
+    `).join('') || `<div style="text-align:center; color:#666; padding:18px; font-size:12px;">Нет данных</div>`;
+}
+
+/* ---------------- УЧАСТНИКИ ---------------- */
+window.addParticipant = async function() {
+    const cid = document.getElementById('newCid').value.trim();
+    const name = document.getElementById('newName').value.trim();
+    if (!cid || !name) { alert('Заполните CID и имя!'); return; }
+    if (MY_PILOTS.some(p => p.cid.toString() === cid)) { alert('Пилот с таким CID уже в ростере!'); return; }
+    try {
+        await setDoc(doc(db, 'custom_pilots', cid), { cid, name });
+        document.getElementById('newCid').value = '';
+        document.getElementById('newName').value = '';
+        await logAudit('Добавление пилота', `Имя: ${name}, CID: ${cid}`);
+    } catch (e) { console.error(e); alert('Не удалось добавить пилота.'); }
+};
+
+window.deleteParticipant = async function(cid, name) {
+    if (!confirm(`Удалить ${name} (${cid}) из ростера?`)) return;
+    try {
+        await deleteDoc(doc(db, 'custom_pilots', cid));
+        await logAudit('Удаление пилота', `Удален CID: ${cid} (${name})`);
+    }
+    catch (e) { console.error(e); alert('Ошибка удаления.'); }
+};
+
+// Пароли участников может выдавать и Основатель, и обычный Админ.
+// Но Админ может выдать пароль только тому, у кого его ещё нет — переизрать/выдать новый
+// взамен существующего может только Основатель.
+window.generatePassword = async function(cid, name) {
+    if (currentRole !== 'founder' && currentRole !== 'admin') { alert('Недостаточно прав для выдачи паролей.'); return; }
+    const cidStr = cid.toString();
+    try {
+        if (currentRole !== 'founder') {
+            const existing = await getDoc(doc(db, 'pilot_auth', cidStr));
+            if (existing.exists() && existing.data().password) {
+                alert('У этого пилота уже есть пароль. Заменить его может только Основатель.');
+                return;
+            }
+        }
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+        const pwd = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        await setDoc(doc(db, 'pilot_auth', cidStr), { password: pwd, mustChange: true, updatedAt: new Date().toISOString() });
+        showIssuedPasswordPopup(name, cidStr, pwd);
+        await logAudit('Выдача пароля', `CID ${cidStr} (${name})`);
+    } catch (e) { console.error(e); alert('Не удалось создать пароль.'); }
+};
+
+// Просмотр уже выданных паролей — только у Основателя.
+window.viewPassword = async function(cid) {
+    if (currentRole !== 'founder') { alert('Только Основатель может просматривать пароли участников!'); return; }
+    try {
+        const snap = await getDoc(doc(db, 'pilot_auth', cid.toString()));
+        if (!snap.exists() || !snap.data().password) { alert('Пароль ещё не выдан этому пилоту.'); return; }
+        alert(`Текущий пароль CID ${cid}: ${snap.data().password}`);
+    } catch (e) { console.error(e); }
+};
+
+// Всплывающее окно с выданным паролем и рабочей кнопкой копирования.
+function closeIssuedPasswordPopup() {
+    const existing = document.getElementById('issuedPwdPopup');
+    if (existing) existing.remove();
+}
+
+function showIssuedPasswordPopup(name, cid, pwd) {
+    closeIssuedPasswordPopup();
+    const overlay = document.createElement('div');
+    overlay.className = 'modal open';
+    overlay.id = 'issuedPwdPopup';
+    overlay.innerHTML = `
+        <div class="modal-content" style="max-width:420px;">
+            <button class="close-modal-btn" onclick="window.__closeIssuedPwdPopup()">&times;</button>
+            <div class="modal-header">Пароль выдан</div>
+            <div class="modal-body">
+                <p style="margin:0 0 12px;">Временный пароль для <strong>${escapeHtml(name)}</strong> (CID ${escapeHtml(cid)}). Передайте его лично — при входе будет предложено сменить на свой.</p>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input id="issuedPwdInput" type="text" readonly value="${escapeHtml(pwd)}"
+                        style="flex:1; min-width:0; font-size:16px; letter-spacing:1px; font-weight:700; color:#fff; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:9px 10px;"
+                        onclick="this.select();">
+                    <button id="issuedPwdCopyBtn" class="mini-btn green" style="margin:0; padding:9px 12px;" onclick="window.__copyIssuedPwd('${pwd.replace(/'/g, "\\'")}')">Копировать</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeIssuedPasswordPopup(); });
+    const input = document.getElementById('issuedPwdInput');
+    if (input) { input.focus(); input.select(); }
+}
+
+window.__closeIssuedPwdPopup = closeIssuedPasswordPopup;
+
+window.__copyIssuedPwd = function(pwd) {
+    const btn = document.getElementById('issuedPwdCopyBtn');
+    const flashCopied = () => {
+        if (!btn) return;
+        const original = btn.textContent;
+        btn.textContent = 'Скопировано';
+        setTimeout(() => { btn.textContent = original; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(pwd).then(flashCopied).catch(() => fallbackCopyIssuedPwd(pwd, flashCopied));
+    } else {
+        fallbackCopyIssuedPwd(pwd, flashCopied);
+    }
+};
+
+function fallbackCopyIssuedPwd(pwd, onDone) {
+    const input = document.getElementById('issuedPwdInput');
+    try {
+        if (input) {
+            input.select();
+            input.setSelectionRange(0, pwd.length);
+        } else {
+            const tmp = document.createElement('textarea');
+            tmp.value = pwd;
+            tmp.style.position = 'fixed';
+            tmp.style.opacity = '0';
+            document.body.appendChild(tmp);
+            tmp.select();
+            document.execCommand('copy');
+            document.body.removeChild(tmp);
+            if (onDone) onDone();
+            return;
+        }
+        document.execCommand('copy');
+        if (onDone) onDone();
+    } catch (e) { console.error(e); }
+}
+
+window.toggleAdmin = async function(cid, name, makeAdmin) {
+    if (currentRole !== 'founder') { alert('Только Основатель может назначать администраторов!'); return; }
+    try {
+        if (makeAdmin) {
+            const roleChoice = prompt(`Роль для ${name} (CID ${cid}):\n\nВведите "admin" — полный администратор\nили "livery" — Ливери-мейкер (обычный участник, может только добавлять/редактировать ливреи)`, 'admin');
+            if (roleChoice === null) return;
+            const role = roleChoice.trim().toLowerCase().startsWith('livery') ? 'liverymaker' : 'admin';
+            const roleName = role === 'liverymaker' ? 'Ливери-мейкера' : 'администратора';
+            const pwd = prompt(`Пароль для нового ${roleName} ${name} (CID ${cid}):`);
+            if (!pwd || pwd.trim().length < 6) { if (pwd !== null) alert('Пароль должен быть не короче 6 символов.'); return; }
+            await setDoc(doc(db, 'admins', cid), { password: pwd.trim(), role: role, addedBy: currentCid });
+            await logAudit('Назначение администратора', `Новый ${roleName} CID: ${cid} (${name})`);
+        } else {
+            if (!confirm(`Убрать права администратора у ${name}?`)) return;
+            await deleteDoc(doc(db, 'admins', cid));
+            await logAudit('Снятие администратора', `CID: ${cid} (${name})`);
+        }
+    } catch (e) { console.error(e); alert('Ошибка изменения прав.'); }
+};
+
+function renderMembers() {
+    const counts = {};
+    flightsData.forEach(f => { if (f.cid) counts[f.cid.toString()] = (counts[f.cid.toString()] || 0) + 1; });
+
+    const rows = [...MY_PILOTS].sort((a, b) => (counts[b.cid.toString()] || 0) - (counts[a.cid.toString()] || 0)).map(p => {
+        const cidStr = p.cid.toString();
+        const isBase = BASE_PILOTS.some(bp => bp.cid.toString() === cidStr);
+        const role = adminsMap[cidStr];
+        const count = counts[cidStr] || 0;
+        const safeName = escapeHtml(p.name).replace(/'/g, "\\'");
+
+        const delBtn = !isBase ? `<button class="mini-btn red" onclick="deleteParticipant('${cidStr}','${safeName}')">Удалить</button>` : '';
+        let adminBtn = '';
+        if (currentRole === 'founder' && role !== 'founder') {
+            adminBtn = role
+                ? `<button class="mini-btn red" onclick="toggleAdmin('${cidStr}','${safeName}',false)">− Админ</button>`
+                : `<button class="mini-btn green" onclick="toggleAdmin('${cidStr}','${safeName}',true)">+ Админ</button>`;
+        }
+
+        return `
+            <tr>
+                <td><strong>${escapeHtml(p.name)}</strong> <span style="color:#666;font-size:10px;display:block;">${cidStr}${role ? ` · ${role === 'founder' ? 'Основатель' : (role === 'liverymaker' ? 'Ливери-мейкер' : 'Админ')}` : ''}</span></td>
+                <td style="text-align:center; color:#2ecc71; font-weight:700;">${count}</td>
+                <td style="white-space:nowrap;">
+                    ${(() => {
+                        const hasPwd = !!pilotAuthMap[cidStr];
+                        if (currentRole === 'founder') {
+                            // Основатель видит пароль и всегда может выдать/переиздать новый.
+                            return `<button class="mini-btn blue" onclick="viewPassword('${cidStr}')">Показать</button>
+                                    <button class="mini-btn green" onclick="generatePassword('${cidStr}','${safeName}')">${hasPwd ? 'Выдать новый' : 'Выдать'}</button>`;
+                        }
+                        if (currentRole === 'admin') {
+                            // Обычный Админ не видит пароли, но может выдать первый пароль тем, у кого его ещё нет.
+                            return hasPwd
+                                ? `<span style="color:#666; font-size:11px;">Только у Основателя</span>`
+                                : `<button class="mini-btn green" onclick="generatePassword('${cidStr}','${safeName}')">Выдать пароль</button>`;
+                        }
+                        return `<span style="color:#666; font-size:11px;">Только у Основателя</span>`;
+                    })()}
+                </td>
+                <td style="white-space:nowrap;">${delBtn}${adminBtn}</td>
+            </tr>
+        `;
+    }).join('');
+
+    document.getElementById('membersBody').innerHTML = rows || `<tr><td colspan="4" style="text-align:center; padding:18px; color:#666;">Ростер пуст</td></tr>`;
+}
+
+/* ---------------- ЧАТ ---------------- */
+let threadsCache = [];
+let activeThreadCid = null;
+let unsubMessages = null;
+
+function listenChatThreads() {
+    onSnapshot(query(collection(db, 'chat_threads'), orderBy('lastTimestamp', 'desc')), snap => {
+        threadsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderThreadsList();
+        const anyUnread = threadsCache.some(t => t.unreadForAdmin && !t.archived);
+        document.getElementById('chatBadge').classList.toggle('show', anyUnread);
+    });
+}
+
+function renderThreadsList() {
+    const box = document.getElementById('chatThreadsList');
+    const showArchived = document.getElementById('toggleArchived')?.checked;
+    const visible = threadsCache.filter(t => showArchived ? true : !t.archived);
+    if (visible.length === 0) {
+        box.innerHTML = `<div style="padding:20px; text-align:center; color:#666; font-size:12px;">${showArchived ? 'В архиве пусто' : 'Пока никто не писал'}</div>`;
+        return;
+    }
+    box.innerHTML = visible.map(t => `
+        <div class="chat-thread-item ${t.id === activeThreadCid ? 'active' : ''} ${t.archived ? 'archived' : ''}" onclick="openThread('${t.id}')" oncontextmenu="window.showThreadContextMenu(event, '${t.id}')">
+            <div class="t-name">${escapeHtml(t.name || t.id)} <span class="t-dot ${t.unreadForAdmin ? 'show' : ''}"></span></div>
+            <div class="t-preview">${t.lastFrom === 'admin' ? 'Вы: ' : ''}${escapeHtml(t.lastMessage || '')}</div>
+        </div>
+    `).join('');
+}
+
+window.openThread = function(cid) {
+    activeThreadCid = cid;
+    renderThreadsList();
+    setDoc(doc(db, 'chat_threads', cid), { unreadForAdmin: false }, { merge: true }).catch(() => {});
+
+    const thread = threadsCache.find(t => t.id === cid);
+    document.getElementById('chatConvBox').innerHTML = `
+        <div class="chat-conv-header">${escapeHtml(thread ? thread.name : cid)} <span>CID ${cid}</span></div>
+        <div class="chat-msgs" id="chatMsgsBox"></div>
+        <div class="chat-input-row">
+            <textarea id="chatReplyInput" rows="1" placeholder="Ответить..." oninput="autoGrowAdmin(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendAdminReply(); }"></textarea>
+            <button onclick="sendAdminReply()" style="background:#2ecc71; color:#fff;" aria-label="Отправить">→</button>
+        </div>
+    `;
+
+    if (unsubMessages) unsubMessages();
+    unsubMessages = onSnapshot(query(collection(db, 'chat_threads', cid, 'messages'), orderBy('timestamp', 'asc')), snap => {
+        const msgsBox = document.getElementById('chatMsgsBox');
+        if (!msgsBox) return;
+        const catLabel = { help: 'Помощь', bug: 'Баг', idea: 'Идея' };
+        const canDelete = currentRole === 'founder';
+        msgsBox.innerHTML = snap.docs.map(d => {
+            const m = d.data();
+            return `
+                <div class="msg ${m.from === 'admin' ? 'admin' : 'user'}" ${canDelete ? `oncontextmenu="window.showMsgContextMenu(event,'${cid}','${d.id}')"` : ''}>
+                    ${m.from === 'admin' ? `<span class="replier">${escapeHtml(m.adminName || 'Администратор')}</span>` : ''}
+                    ${m.category ? `<span class="cat">${catLabel[m.category] || m.category}</span><br>` : ''}
+                    ${escapeHtml(m.text || '')}
+                    <span class="ts">${new Date(m.timestamp).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</span>
+                </div>
+            `;
+        }).join('');
+        msgsBox.scrollTop = msgsBox.scrollHeight;
+    });
+};
+
+window.autoGrowAdmin = function(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+};
+
+function getCurrentAdminName() {
+    const p = MY_PILOTS.find(p => p.cid.toString() === currentCid.toString());
+    return p ? p.name : `CID ${currentCid}`;
+}
+
+window.sendAdminReply = async function() {
+    const input = document.getElementById('chatReplyInput');
+    const text = input.value.trim();
+    if (!text || !activeThreadCid) return;
+    input.value = '';
+    input.style.height = 'auto';
+    const nowIso = new Date().toISOString();
+    try {
+        await addDoc(collection(db, 'chat_threads', activeThreadCid, 'messages'), {
+            from: 'admin', text, category: null, timestamp: nowIso,
+            adminCid: currentCid, adminName: getCurrentAdminName()
+        });
+        await setDoc(doc(db, 'chat_threads', activeThreadCid), {
+            lastMessage: text, lastTimestamp: nowIso, lastFrom: 'admin', unreadForUser: true,
+            lastAdminName: getCurrentAdminName()
+        }, { merge: true });
+    } catch (e) { console.error(e); }
+};
+
+/* ---------------- КОНТЕКСТНОЕ МЕНЮ ЧАТА (ПКМ) ---------------- */
+function closeChatContextMenu() {
+    const m = document.getElementById('chatCtxMenu');
+    if (m) m.remove();
+}
+
+function placeChatContextMenu(menu, e) {
+    document.body.appendChild(menu);
+    const x = Math.min(e.clientX, window.innerWidth - menu.offsetWidth - 10);
+    const y = Math.min(e.clientY, window.innerHeight - menu.offsetHeight - 10);
+    menu.style.left = Math.max(8, x) + 'px';
+    menu.style.top = Math.max(8, y) + 'px';
+    setTimeout(() => document.addEventListener('click', closeChatContextMenu, { once: true }), 0);
+}
+
+// ПКМ по отдельному сообщению — удаление доступно только Основателю (владельцу)
+window.showMsgContextMenu = function(e, threadCid, msgId) {
+    e.preventDefault();
+    if (currentRole !== 'founder') return;
+    closeChatContextMenu();
+    const menu = document.createElement('div');
+    menu.className = 'pilot-context-menu';
+    menu.id = 'chatCtxMenu';
+    menu.innerHTML = `<div class="pilot-context-item danger" onclick="window.closeChatContextMenuPublic(); window.deleteMessage('${threadCid}','${msgId}')">Удалить сообщение</div>`;
+    placeChatContextMenu(menu, e);
+};
+
+// ПКМ по диалогу в списке слева — архивировать (любой админ) / удалить чат (только Основатель)
+window.showThreadContextMenu = function(e, threadCid) {
+    e.preventDefault();
+    e.stopPropagation();
+    closeChatContextMenu();
+    const t = threadsCache.find(x => x.id === threadCid);
+    const isArchived = !!(t && t.archived);
+    let items = `<div class="pilot-context-item" onclick="window.closeChatContextMenuPublic(); window.toggleArchiveThread('${threadCid}', ${!isArchived})">${isArchived ? 'Восстановить из архива' : 'Архивировать чат'}</div>`;
+    if (currentRole === 'founder') {
+        items += `<div class="pilot-context-item danger" onclick="window.closeChatContextMenuPublic(); window.deleteThread('${threadCid}')">Удалить чат</div>`;
+    }
+    const menu = document.createElement('div');
+    menu.className = 'pilot-context-menu';
+    menu.id = 'chatCtxMenu';
+    menu.innerHTML = items;
+    placeChatContextMenu(menu, e);
+};
+
+window.closeChatContextMenuPublic = closeChatContextMenu;
+
+window.deleteMessage = async function(threadCid, msgId) {
+    if (currentRole !== 'founder') { alert('Только Основатель может удалять сообщения!'); return; }
+    if (!confirm('Удалить это сообщение?')) return;
+    try {
+        await deleteDoc(doc(db, 'chat_threads', threadCid, 'messages', msgId));
+        await logAudit('Удаление сообщения', `CID: ${threadCid}`);
+    }
+    catch (e) { console.error(e); alert('Ошибка удаления сообщения.'); }
+};
+
+window.toggleArchiveThread = async function(cid, archive) {
+    try { await setDoc(doc(db, 'chat_threads', cid), { archived: archive }, { merge: true }); }
+    catch (e) { console.error(e); alert('Ошибка архивации чата.'); }
+};
+
+window.deleteThread = async function(cid) {
+    if (currentRole !== 'founder') { alert('Только Основатель может удалять чаты!'); return; }
+    const t = threadsCache.find(x => x.id === cid);
+    if (!confirm(`Удалить весь чат с ${t ? t.name : cid}? Это действие необратимо.`)) return;
+    try {
+        const msgsSnap = await getDocs(collection(db, 'chat_threads', cid, 'messages'));
+        await Promise.all(msgsSnap.docs.map(d => deleteDoc(d.ref)));
+        await deleteDoc(doc(db, 'chat_threads', cid));
+        await logAudit('Удаление чата', `CID: ${cid} (${t ? t.name : cid})`);
+        if (activeThreadCid === cid) {
+            activeThreadCid = null;
+            document.getElementById('chatConvBox').innerHTML = `<div class="chat-empty">Выберите переписку слева</div>`;
+        }
+    } catch (e) { console.error(e); alert('Ошибка удаления чата.'); }
+};
+
+/* ---------------- ВКЛАДКИ ---------------- */
+window.switchTab = function(tab) {
+    document.querySelectorAll('.side-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+    document.querySelectorAll('.pane').forEach(el => el.classList.remove('active'));
+    document.getElementById('pane-' + tab).classList.add('active');
+};
+
+function escapeHtml(str) {
+    return (str || '').toString().replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+</script>
+</body>
+</html>
