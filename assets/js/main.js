@@ -1,6 +1,6 @@
         // 1. Импортируем нужные функции из официального CDN Firebase + функции для запросов (query, orderBy, limit)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, onSnapshot, deleteDoc, query, orderBy, limit, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, getDocs, setDoc, addDoc, collection, onSnapshot, deleteDoc, query, orderBy, limit, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // 2. Конфигурация проекта из вкладки CDN
         const firebaseConfig = {
@@ -1365,14 +1365,16 @@
             }
         }
 
-        function renderRoster(vatsimData) {
-            if (!rosterTbody) return;
-            rosterTbody.innerHTML = '';
-            const pilotsOnline = vatsimData.pilots || [];
-            const controllersOnline = vatsimData.controllers || [];
+        // Счётчик «в сети» в шапке есть на КАЖДОЙ странице (_layouts/default.html),
+        // поэтому он обновляется отдельно от таблицы участников: раньше он считался
+        // внутри renderRoster() после проверки наличия таблицы и на всех страницах,
+        // кроме roster.html, навсегда оставался на 0.
+        function updateOnlineCounter(vatsimData) {
+            const pilotsOnline = (vatsimData && vatsimData.pilots) || [];
+            const controllersOnline = (vatsimData && vatsimData.controllers) || [];
 
-            const totalOnline = window.MY_PILOTS.filter(localPilot => 
-                pilotsOnline.some(p => p.cid.toString() === localPilot.cid.toString()) || 
+            const totalOnline = window.MY_PILOTS.filter(localPilot =>
+                pilotsOnline.some(p => p.cid.toString() === localPilot.cid.toString()) ||
                 controllersOnline.some(c => c.cid.toString() === localPilot.cid.toString())
             ).length;
 
@@ -1382,6 +1384,52 @@
                 counterTextEl.setAttribute('data-en', `${totalOnline} online`);
                 counterTextEl.textContent = currentLang === 'en' ? `${totalOnline} online` : `${totalOnline} в сети`;
             }
+        }
+
+        // Лёгкий режим для страниц без таблицы/кабинета/админки: только чтение
+        // списка пилотов (раз в 10 мин, кэш в sessionStorage) + публичный API VATSIM.
+        // Никаких живых подписок и записей в Firestore.
+        async function startLightOnlineCounter() {
+            const CACHE_KEY = 'vc_custom_pilots_v1';
+            const TTL = 10 * 60 * 1000;
+            try {
+                let custom = null;
+                try {
+                    const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
+                    if (cached && Date.now() - cached.t < TTL && Array.isArray(cached.d)) custom = cached.d;
+                } catch (e) {}
+                if (!custom) {
+                    const snap = await getDocs(collection(db, 'custom_pilots'));
+                    custom = [];
+                    snap.forEach(d => custom.push(d.data()));
+                    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), d: custom })); } catch (e) {}
+                }
+                window.MY_PILOTS = [...BASE_PILOTS, ...custom];
+            } catch (e) {
+                console.error('Не удалось загрузить список пилотов для счётчика:', e);
+            }
+
+            async function tick() {
+                try {
+                    const r = await fetch('https://data.vatsim.net/v3/vatsim-data.json');
+                    if (!r.ok) throw new Error('Network error');
+                    window.lastVatsimData = await r.json();
+                    updateOnlineCounter(window.lastVatsimData);
+                } catch (e) {
+                    console.error('Ошибка получения данных VATSIM для счётчика:', e);
+                }
+            }
+            await tick();
+            setInterval(() => { if (!document.hidden) tick(); }, 60000);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+        }
+
+        function renderRoster(vatsimData) {
+            updateOnlineCounter(vatsimData);
+            if (!rosterTbody) return;
+            rosterTbody.innerHTML = '';
+            const pilotsOnline = vatsimData.pilots || [];
+            const controllersOnline = vatsimData.controllers || [];
 
             const sortedPilots = [...window.MY_PILOTS].sort((a, b) => {
                 const aIsController = controllersOnline.some(c => c.cid.toString() === a.cid.toString());
@@ -2625,6 +2673,9 @@
                 document.addEventListener('visibilitychange', () => {
                     if (!document.hidden) fetchVatsimData();
                 });
+            } else if (document.getElementById('globalOnlineCounter')) {
+                // Остальные страницы: счётчик в шапке всё равно должен работать.
+                startLightOnlineCounter();
             }
 
             window._checkPendingHighlight();
