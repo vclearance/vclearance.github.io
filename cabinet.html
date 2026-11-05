@@ -756,6 +756,21 @@ function greatCirclePoints(a, b) {
     return pts;
 }
 
+// метка-«булавка» для аэропорта
+let airportPinIcon = null;
+function getAirportPinIcon() {
+    if (airportPinIcon) return airportPinIcon;
+    airportPinIcon = L.divIcon({
+        className: '',
+        html: '<svg width="24" height="32" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg" style="display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));">'
+            + '<path d="M12 1C5.9 1 1 5.9 1 12c0 8.2 11 19 11 19s11-10.8 11-19C23 5.9 18.1 1 12 1z" fill="#2ecc71" stroke="#0d0d0d" stroke-width="1.5"/>'
+            + '<circle cx="12" cy="12" r="4.2" fill="#0d0d0d"/></svg>',
+        iconSize: [24, 32],
+        iconAnchor: [12, 31]
+    });
+    return airportPinIcon;
+}
+
 async function renderFlightMap(flights) {
     const info = document.getElementById('flightMapInfo');
     try {
@@ -801,8 +816,8 @@ async function renderFlightMap(flights) {
         airports.forEach(code => {
             const ap = db_[code];
             const label = `<strong>${code}</strong>${ap[4] ? ' / ' + escapeHtml(ap[4]) : ''}<br>${escapeHtml(ap[2] || '')}${ap[3] ? ', ' + escapeHtml(ap[3]) : ''}`;
-            L.circleMarker([ap[0], ap[1]], { radius: 5, color: '#2ecc71', weight: 2, fillColor: '#0d0d0d', fillOpacity: 1 })
-                .bindTooltip(label, { direction: 'top' })
+            L.marker([ap[0], ap[1]], { icon: getAirportPinIcon(), riseOnHover: true })
+                .bindTooltip(label, { direction: 'top', offset: [0, -30] })
                 .addTo(flightMapLayer);
         });
 
