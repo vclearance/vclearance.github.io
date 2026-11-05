@@ -14,6 +14,39 @@ description: Живой ростер участников vClearance с онла
     </div>
 </section>
 
+<section id="livemap" class="content-section content-section-tight">
+    <div class="container">
+        <div class="block-head">
+            <h2 class="section-title lang" data-ru="Карта полётов" data-en="Live Map">Карта полётов</h2>
+            <p class="block-lead lang"
+               data-ru="Участники vClearance, которые прямо сейчас летают в сети VATSIM. Зелёные самолёты — рейсы под нашими позывными CLR/CLF, синие — остальные полёты участников. Наведите на самолёт, чтобы увидеть детали и маршрут: сплошная линия — от вылета до текущей позиции, пунктир — до аэропорта назначения."
+               data-en="vClearance members currently flying on VATSIM. Green aircraft fly under our CLR/CLF callsigns, blue ones are other flights by members. Hover an aircraft for details and its route: solid line from departure to current position, dashed line to the destination.">Участники vClearance, которые прямо сейчас летают в сети VATSIM. Зелёные самолёты — рейсы под нашими позывными CLR/CLF, синие — остальные полёты участников. Наведите на самолёт, чтобы увидеть детали и маршрут: сплошная линия — от вылета до текущей позиции, пунктир — до аэропорта назначения.</p>
+        </div>
+        <style>
+            #liveMap { height: 480px; background: #0d0d0d; border: 1px solid var(--line); }
+            #liveMap .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.7); }
+            #liveMap .leaflet-container { background: #0d0d0d; }
+            #liveMap .lm-plane { background: none; border: none; }
+            #liveMap .lm-plane svg { transition: transform .3s; }
+            #liveMap .lm-hl { position: relative; }
+            #liveMap .lm-ring { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; border: 2px solid rgba(46,204,113,.7); animation: lmPulse 2s ease-out infinite; pointer-events: none; }
+            @keyframes lmPulse { 0% { transform: scale(.55); opacity: .9; } 100% { transform: scale(1.15); opacity: 0; } }
+            #liveMap .lm-tip { background: #161616; color: #eaeaea; border: 1px solid #2ecc71; border-radius: 0; font-size: 12.5px; line-height: 1.45; box-shadow: 0 4px 14px rgba(0,0,0,.6); }
+            #liveMap .lm-tip:before { border-top-color: #2ecc71; }
+            #liveMap .lm-apt { background: #161616; color: #eaeaea; border: 1px solid #444; border-radius: 0; font-family: var(--mono); font-size: 11px; padding: 1px 5px; box-shadow: none; }
+            #liveMap .lm-apt:before { display: none; }
+            .livemap-legend { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding: 10px 0 0; font-size: 12.5px; color: var(--text-3); }
+            .livemap-legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+        </style>
+        <div id="liveMap" data-airports="{{ '/assets/data/airports.json' | relative_url }}"></div>
+        <div class="livemap-legend">
+            <span><i style="background:#2ecc71;"></i>CLR / CLF</span>
+            <span><i style="background:#4aa3ff;"></i><span class="lang" data-ru="Другие полёты участников" data-en="Other member flights">Другие полёты участников</span></span>
+            <span id="liveMapInfo">Загрузка карты...</span>
+        </div>
+    </div>
+</section>
+
 <section id="roster" class="content-section content-section-tight">
     <div class="container">
         <div id="rosterAdminControls" class="admin-bar"></div>
@@ -80,3 +113,5 @@ description: Живой ростер участников vClearance с онла
         </div>
     </div>
 </section>
+
+<script src="{{ '/assets/js/livemap.js' | relative_url }}"></script>

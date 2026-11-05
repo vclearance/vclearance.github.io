@@ -1426,6 +1426,7 @@
 
         function renderRoster(vatsimData) {
             updateOnlineCounter(vatsimData);
+            if (window.updateLiveMap) window.updateLiveMap(vatsimData);
             if (!rosterTbody) return;
             rosterTbody.innerHTML = '';
             const pilotsOnline = vatsimData.pilots || [];
