@@ -148,12 +148,15 @@
         lastData = data;
         const info = document.getElementById('liveMapInfo');
         try {
-            await Promise.all([ensureLibs(), ensureAirports()]);
+            await renderInner(data, info);
         } catch (e) {
-            console.error('Живая карта: не удалось загрузить библиотеки', e);
-            if (info) info.textContent = 'Не удалось загрузить карту.';
-            return;
+            console.error('Живая карта: ошибка', e);
+            if (info) info.textContent = 'Не удалось отобразить карту: ' + (e && e.message ? e.message : e);
         }
+    }
+
+    async function renderInner(data, info) {
+        await Promise.all([ensureLibs(), ensureAirports()]);
         if (!map) {
             map = L.map(box, { worldCopyJump: true, minZoom: 2 }).setView([50, 30], 3);
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -201,7 +204,29 @@
         }
     }
 
+    // main.js по-прежнему может вызывать updateLiveMap при обновлении ростера,
+    // но карта больше от этого не зависит: сама опрашивает публичный API VATSIM.
     window.updateLiveMap = render;
-    // данные могли прийти раньше, чем загрузился этот скрипт
-    if (window.lastVatsimData) render(window.lastVatsimData);
+
+    let polling = false;
+    async function poll() {
+        if (polling) return;
+        polling = true;
+        try {
+            const r = await fetch('https://data.vatsim.net/v3/vatsim-data.json', { cache: 'no-store' });
+            if (!r.ok) throw new Error('VATSIM API: HTTP ' + r.status);
+            const data = await r.json();
+            window.lastVatsimData = data;
+            await render(data);
+        } catch (e) {
+            console.error('Живая карта: не удалось получить данные VATSIM', e);
+            const info = document.getElementById('liveMapInfo');
+            if (info && !map) info.textContent = 'Не удалось получить данные VATSIM.';
+        } finally {
+            polling = false;
+        }
+    }
+    poll();
+    setInterval(() => { if (!document.hidden) poll(); }, 30000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 })();
