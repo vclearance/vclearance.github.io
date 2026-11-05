@@ -893,3 +893,105 @@ footer, .site-footer { background: var(--bg-alt); border-top: 1px solid var(--li
     .faq-aside { position: static; }
     .cta-band { padding: 28px 22px; }
 }
+
+
+/* ==========================================================================
+   МОБИЛЬНАЯ ВЕРСИЯ — компактные размеры, таблицы ростера карточками
+   ========================================================================== */
+@media (max-width: 768px) {
+    body { font-size: 14px; }
+    .container { padding: 0 16px; }
+
+    /* заголовки и вступления */
+    .page-head { padding: 32px 0 20px; }
+    .page-head h1 { font-size: 28px; line-height: 1.1; margin-bottom: 12px; }
+    .lead { font-size: 14.5px; line-height: 1.55; }
+    .section-title { font-size: 22px; }
+    .block-head { gap: 8px; margin-bottom: 18px; }
+    .block-lead { font-size: 14px; line-height: 1.55; }
+    .content-section { padding: 36px 0; }
+    .content-section-tight { padding-top: 22px; }
+    .cell { padding: 18px 16px 20px; }
+    .step { padding-top: 52px; }
+    .step::before { top: 20px; left: 16px; }
+    .cell h3 { font-size: 18px; margin-bottom: 8px; }
+    .cell p { font-size: 14px; line-height: 1.55; }
+    .btn { height: 42px; padding: 0 18px; font-size: 13.5px; }
+    .note { font-size: 13px; }
+
+    /* hero */
+    .hero-statement { font-size: 21px; margin-bottom: 24px; }
+    .hero-logos-container { margin-bottom: 24px; gap: 14px; }
+
+    /* about / faq */
+    .about-photo { height: 200px; }
+    .fact-strip { grid-template-columns: 1fr 1fr; }
+    .hub-code { font-size: 28px; margin-bottom: 4px; }
+    .fact { padding: 16px; }
+    .fact-num { font-size: 26px; }
+    .fact-label { font-size: 12.5px; }
+    .faq-item summary { font-size: 17px; padding: 16px 0; gap: 14px; }
+    .faq-item .faq-answer { font-size: 14px; padding-bottom: 18px; }
+    .cta-band h3 { font-size: 21px; }
+    .cta-band p { font-size: 14px; }
+    .cta-band .cta-actions { width: 100%; }
+    .cta-band .cta-actions .btn { flex: 1 1 140px; }
+
+    /* карта */
+    #liveMap { height: 340px !important; }
+    .livemap-legend { gap: 8px 14px; font-size: 12px; }
+
+    /* футер компактнее */
+    footer { padding-top: 32px; }
+    .footer-grid { gap: 22px; }
+
+    /* ---------- Ростер: строки-карточки вместо широкой таблицы ---------- */
+    .roster-wrapper { overflow-x: visible; border: none; background: transparent; }
+    .roster-table:has(#roster-tbody), .roster-table:has(#recent-flights-tbody) { min-width: 0; display: block; font-size: 14px; }
+    .roster-table:has(#roster-tbody) thead, .roster-table:has(#recent-flights-tbody) thead { display: none; }
+    #roster-tbody, #recent-flights-tbody { display: block; }
+    #roster-tbody td, #recent-flights-tbody td { display: block; padding: 0; border: none; background: none; }
+
+    #roster-tbody tr.pilot-row-clickable, #recent-flights-tbody tr {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+        margin-top: 8px; padding: 12px 14px;
+        background: var(--bg); border: 1px solid var(--line);
+    }
+    #roster-tbody tr.pilot-row-clickable:hover td, #recent-flights-tbody tr:hover td { background: none; }
+    #roster-tbody tr.pilot-row-clickable.active { border-color: var(--green-line); background: var(--panel); }
+
+    /* ячейка с именем: имя, CID и кнопки переносятся внутри */
+    #roster-tbody tr.pilot-row-clickable > td:nth-child(1) {
+        flex: 1 1 calc(100% - 110px); min-width: 0;
+        display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px;
+    }
+    #roster-tbody tr.pilot-row-clickable > td:nth-child(1) strong { order: 1; font-size: 15px; }
+    #roster-tbody tr.pilot-row-clickable > td:nth-child(1) > span { order: 2; }
+    #roster-tbody tr.pilot-row-clickable > td:nth-child(1) .btn-its-me { order: 3; }
+    #roster-tbody tr.pilot-row-clickable > td:nth-child(1) .clr-lastseen-inline,
+    #roster-tbody tr.pilot-row-clickable > td:nth-child(1) .clr-count-inline { order: 4; font-size: 12px; }
+    #roster-tbody tr.pilot-row-clickable > td:nth-child(5) { order: 1; flex: 0 0 auto; margin-left: auto; }
+    #roster-tbody .status-cell { align-items: flex-end; }
+    #roster-tbody tr.pilot-row-clickable > td:nth-child(n+2):nth-child(-n+4) { order: 2; flex: 0 0 auto; font-size: 13px; color: var(--text-2); }
+    /* пилот не в сети: прячем пустые "---" */
+    #roster-tbody tr.pilot-row-clickable:has(.status-offline) > td:nth-child(n+2):nth-child(-n+4) { display: none; }
+
+    /* раскрывающаяся панель под карточкой */
+    #roster-tbody tr.pilot-details-row { display: block; margin: 0; padding: 0; }
+    #roster-tbody tr.pilot-details-row td { display: block; }
+    #roster-tbody tr.pilot-details-row.open { border: 1px solid var(--line); border-top: none; background: var(--panel); }
+    .pilot-details-row.open .pilot-details-inner { padding: 14px; gap: 12px; }
+
+    /* последние полёты: пилот и дата сверху, позывной / маршрут / тип ниже */
+    #recent-flights-tbody tr > td:nth-child(2) { order: 1; flex: 1 1 calc(100% - 110px); min-width: 0; }
+    #recent-flights-tbody tr > td:nth-child(1) { order: 2; flex: 0 0 auto; margin-left: auto; text-align: right; font-size: 12px !important; }
+    #recent-flights-tbody tr > td:nth-child(n+3) { order: 3; flex: 0 0 auto; font-size: 13px; }
+    #recent-flights-tbody tr > td:only-child { flex: 1 1 100%; text-align: center; }
+
+    .roster-more, .pagination { margin-top: 12px; }
+}
+
+@media (max-width: 380px) {
+    .page-head h1 { font-size: 25px; }
+    .fact-num { font-size: 22px; }
+}
