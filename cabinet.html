@@ -306,6 +306,7 @@ layout: none
 
                     <div class="card">
                         <h3>Карта моих полётов</h3>
+                        <style>#flightMap .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.7); } #flightMap .leaflet-container { background:#0d0d0d; }</style>
                         <div id="flightMapBox" style="position:relative;">
                             <div id="flightMap" style="height:420px; background:var(--panel-2);"></div>
                         </div>
@@ -761,9 +762,9 @@ async function renderFlightMap(flights) {
         const [db_] = await Promise.all([ensureAirports(), ensureMapLibs()]);
         if (!flightMap) {
             flightMap = L.map('flightMap', { worldCopyJump: true, minZoom: 2, zoomControl: true }).setView([50, 30], 3);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd', maxZoom: 12
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 12
             }).addTo(flightMap);
         }
         if (flightMapLayer) flightMapLayer.remove();
