@@ -799,8 +799,10 @@ async function renderFlightMap(flights) {
             pts.forEach(p => bounds.push(p));
         });
         airports.forEach(code => {
-            L.circleMarker(db_[code], { radius: 4, color: '#2ecc71', weight: 1, fillColor: '#0d0d0d', fillOpacity: 1 })
-                .bindTooltip(code, { direction: 'top' })
+            const ap = db_[code];
+            const label = `<strong>${code}</strong>${ap[4] ? ' / ' + escapeHtml(ap[4]) : ''}<br>${escapeHtml(ap[2] || '')}${ap[3] ? ', ' + escapeHtml(ap[3]) : ''}`;
+            L.circleMarker([ap[0], ap[1]], { radius: 5, color: '#2ecc71', weight: 2, fillColor: '#0d0d0d', fillOpacity: 1 })
+                .bindTooltip(label, { direction: 'top' })
                 .addTo(flightMapLayer);
         });
 
